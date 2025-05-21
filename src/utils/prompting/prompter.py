@@ -17,10 +17,10 @@ from pydantic import BaseModel
 from tqdm import tqdm
 import yaml
 from dotenv import load_dotenv
-import torch
+# import torch
 import openai
-from transformers import (
-    AutoTokenizer, BitsAndBytesConfig, AutoModelForCausalLM)
+# from transformers import (
+#     AutoTokenizer, BitsAndBytesConfig, AutoModelForCausalLM)
 
 from utils.logging_utils import MasterLogger
 
@@ -267,105 +267,105 @@ class OpenAIPrompter(Prompter):
         return results
 
 
-class HFPrompter(Prompter):
-    def __init__(
-        self,
-        llm_model: str,
-        max_new_tokens: int = 2000,
-        temperature: float = 0.1,
-        quantize: bool = False,
-        device_map: Union[str, int, dict] = 0,
-        torch_dtype=torch.float16,
-        **kwargs, 
-    ):
-        super().__init__(llm_model=llm_model, temperature=temperature, **kwargs)
+# class HFPrompter(Prompter):
+#     def __init__(
+#         self,
+#         llm_model: str,
+#         max_new_tokens: int = 2000,
+#         temperature: float = 0.1,
+#         quantize: bool = False,
+#         device_map: Union[str, int, dict] = 0,
+#         torch_dtype=torch.float16,
+#         **kwargs, 
+#     ):
+#         super().__init__(llm_model=llm_model, temperature=temperature, **kwargs)
 
-        # Handle device_map flexibly
-        if isinstance(device_map, int):
-            device_map = {"": device_map}
-        elif not isinstance(device_map, (str, dict)):
-            raise ValueError("device_map must be a string ('auto'), int, or dict")
+#         # Handle device_map flexibly
+#         if isinstance(device_map, int):
+#             device_map = {"": device_map}
+#         elif not isinstance(device_map, (str, dict)):
+#             raise ValueError("device_map must be a string ('auto'), int, or dict")
 
-        self.tokenizer = AutoTokenizer.from_pretrained(llm_model)
-        self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.max_new_tokens = max_new_tokens
-        self.first_print = True
+#         self.tokenizer = AutoTokenizer.from_pretrained(llm_model)
+#         self.tokenizer.pad_token = self.tokenizer.eos_token
+#         self.max_new_tokens = max_new_tokens
+#         self.first_print = True
 
-        model_kwargs = {
-            "device_map": device_map,
-            "torch_dtype": torch_dtype
-        }
+#         model_kwargs = {
+#             "device_map": device_map,
+#             "torch_dtype": torch_dtype
+#         }
 
-        if quantize:
-            model_kwargs["quantization_config"] = BitsAndBytesConfig(
-                load_in_8bit=True,
-                bnb_4bit_compute_dtype=torch.float16
-            )
+#         if quantize:
+#             model_kwargs["quantization_config"] = BitsAndBytesConfig(
+#                 load_in_8bit=True,
+#                 bnb_4bit_compute_dtype=torch.float16
+#             )
 
-        self.model = AutoModelForCausalLM.from_pretrained(llm_model, **model_kwargs)
+#         self.model = AutoModelForCausalLM.from_pretrained(llm_model, **model_kwargs)
 
-    def parse_output(self, generated_text: str) -> Union[str, dict]:
-        cleaned = generated_text.strip()
+#     def parse_output(self, generated_text: str) -> Union[str, dict]:
+#         cleaned = generated_text.strip()
 
-        if not self.is_structured_output:
-            return cleaned
+#         if not self.is_structured_output:
+#             return cleaned
 
-        if cleaned.lower().startswith("object."):
-            cleaned = cleaned[len("object."):].strip()
+#         if cleaned.lower().startswith("object."):
+#             cleaned = cleaned[len("object."):].strip()
 
-        try:
-            return json.loads(cleaned)
-        except json.JSONDecodeError:
-            try:
-                return ast.literal_eval(cleaned)
-            except Exception:
-                raise ValueError(f"Output was not valid JSON or Python literal:\n{generated_text}")
+#         try:
+#             return json.loads(cleaned)
+#         except json.JSONDecodeError:
+#             try:
+#                 return ast.literal_eval(cleaned)
+#             except Exception:
+#                 raise ValueError(f"Output was not valid JSON or Python literal:\n{generated_text}")
 
-    def _build_messages(self, input_texts: Dict[str, str]) -> List[Dict[str, str]]:
-        messages = [{"role": "system", "content": self.system_prompt}]
-        for qa in self.examples:
-            messages.append({"role": "user", "content": f"{self.main_prompt_header}\n{qa.question}"})
-            messages.append({"role": "assistant", "content": qa.answer})
-        final_prompt = self.format_q_as_string(input_texts)
-        messages.append({"role": "user", "content": f"{self.main_prompt_header}\n{final_prompt}"})
+#     def _build_messages(self, input_texts: Dict[str, str]) -> List[Dict[str, str]]:
+#         messages = [{"role": "system", "content": self.system_prompt}]
+#         for qa in self.examples:
+#             messages.append({"role": "user", "content": f"{self.main_prompt_header}\n{qa.question}"})
+#             messages.append({"role": "assistant", "content": qa.answer})
+#         final_prompt = self.format_q_as_string(input_texts)
+#         messages.append({"role": "user", "content": f"{self.main_prompt_header}\n{final_prompt}"})
 
-        if self.first_print:
-            self.first_print = False
-            print("=" * 50)
-            print("=" * 17, "EXAMPLE PROMPT", "=" * 17)
-            print(json.dumps(messages, indent=4))
-            print("=" * 50)
+#         if self.first_print:
+#             self.first_print = False
+#             print("=" * 50)
+#             print("=" * 17, "EXAMPLE PROMPT", "=" * 17)
+#             print(json.dumps(messages, indent=4))
+#             print("=" * 50)
 
-        return messages
+#         return messages
 
-    def get_completion(self, input_texts: Union[Dict[str, str], List[Dict[str, str]]], parse=True) -> Union[dict, List[dict], str]:
-        if isinstance(input_texts, dict):
-            input_texts = [input_texts]
+#     def get_completion(self, input_texts: Union[Dict[str, str], List[Dict[str, str]]], parse=True) -> Union[dict, List[dict], str]:
+#         if isinstance(input_texts, dict):
+#             input_texts = [input_texts]
 
-        messages_list = [self._build_messages(item) for item in input_texts]
+#         messages_list = [self._build_messages(item) for item in input_texts]
 
-        prompts = [
-            self.tokenizer.apply_chat_template(m, add_generation_prompt=True, tokenize=False)
-            for m in messages_list
-        ]
+#         prompts = [
+#             self.tokenizer.apply_chat_template(m, add_generation_prompt=True, tokenize=False)
+#             for m in messages_list
+#         ]
 
-        inputs = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
-        input_ids = inputs["input_ids"].to(self.model.device)
-        attention_mask = inputs["attention_mask"].to(self.model.device)
+#         inputs = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True)
+#         input_ids = inputs["input_ids"].to(self.model.device)
+#         attention_mask = inputs["attention_mask"].to(self.model.device)
 
-        outputs = self.model.generate(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            max_new_tokens=self.max_new_tokens,
-            return_dict_in_generate=True
-        )
+#         outputs = self.model.generate(
+#             input_ids=input_ids,
+#             attention_mask=attention_mask,
+#             max_new_tokens=self.max_new_tokens,
+#             return_dict_in_generate=True
+#         )
 
-        generated_sequences = outputs.sequences
-        results = []
-        for i in range(len(generated_sequences)):
-            input_len = (input_ids[i] != self.tokenizer.pad_token_id).sum().item()
-            gen_tokens = generated_sequences[i][input_len:]
-            decoded = self.tokenizer.decode(gen_tokens, skip_special_tokens=True)
-            results.append(self.parse_output(decoded) if parse else decoded)
+#         generated_sequences = outputs.sequences
+#         results = []
+#         for i in range(len(generated_sequences)):
+#             input_len = (input_ids[i] != self.tokenizer.pad_token_id).sum().item()
+#             gen_tokens = generated_sequences[i][input_len:]
+#             decoded = self.tokenizer.decode(gen_tokens, skip_special_tokens=True)
+#             results.append(self.parse_output(decoded) if parse else decoded)
 
-        return [results[0]] if len(results) == 1 else results
+#         return [results[0]] if len(results) == 1 else results
