@@ -1,3 +1,10 @@
 {
-    "colors": ["RED", "GREEN", "YELLOW", "BLUE", "MAGENTA", "CYAN"]
+    "colors": [
+        "RED", 
+        "GREEN", 
+        "YELLOW", 
+        "BLUE", 
+        "MAGENTA", 
+        "CYAN"
+    ]
 }

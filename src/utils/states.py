@@ -10,6 +10,7 @@ class ScreenEnum(Enum):
     CHAT = 2
     VOTE = 3
     SCORE = 4
+    DEBUG = 5
 
 @dataclass
 class PlayerState:

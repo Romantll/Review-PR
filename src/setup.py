@@ -40,7 +40,6 @@ class PlayerSetup:
         self.code_name_assigner = SequentialAssigner(names_path, names_index_path, "code_names")
         self.color_assigner = SequentialAssigner(colors_path, colors_index_path, "colors")
 
-
     def prompt_input(self, field_name: str, prompt: str) -> None:
         """Prompt for a generic input and ensure it is not empty."""
         while True:

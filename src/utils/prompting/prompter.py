@@ -41,6 +41,7 @@ class Prompter(ABC):
         self.prompt_headers = prompt_headers
         self.temperature = temperature
         self.first_print = True
+        self.show_prompts = True  # Set to False to disable prompt printing
         (
             self.output_format_class,
             self.examples,
@@ -193,7 +194,7 @@ class OpenAIPrompter(Prompter):
             messages.append({"role": "user", "content": f"{self.main_prompt_header}\n{user_input_prompt}"})
 
 
-        if self.first_print:
+        if self.show_prompts and self.first_print:
             self.first_print = False
             print("=" * 50)
             print("=" * 17, "EXAMPLE PROMPT", "=" * 17)

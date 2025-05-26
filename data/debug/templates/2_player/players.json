@@ -1,0 +1,24 @@
+[
+  {
+    "first_name": "Dan",
+    "last_initial": "S",
+    "grade": 6,
+    "favorite_food": "Pizza",
+    "favorite_animal": "Cheetah",
+    "hobby": "Board Games",
+    "extra_info": "Loves cheese.",
+    "code_name": "HORSE",
+    "color_name": "MAGENTA"
+  },
+  {
+    "first_name": "Alex",
+    "last_initial": "T",
+    "grade": 6,
+    "favorite_food": "Pasta",
+    "favorite_animal": "Fox",
+    "hobby": "Soccer",
+    "extra_info": "Likes math.",
+    "code_name": "MONKEY",
+    "color_name": "CYAN"
+  }
+]

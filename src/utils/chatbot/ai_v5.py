@@ -113,17 +113,17 @@ class AIPlayer:
         dtr_resp = {}
 
         try:
-            # Run LLM completion in a thread to avoid blocking the event loop
             response_json = await asyncio.to_thread(prompter.get_completion, input_texts)
+            resp = response_json[0]
         except Exception as e:
-            raise e
+            # raise e
             self.logger.error(f"Error during decision to respond: {e}")
             dtr_resp["decision"] = "ERROR"
             dtr_resp["reasoning"] = f"Error during decision making. {e}"
             return dtr_resp
 
-        decision = extract_between_delimiters(response_json, '```')
-        reasoning = extract_between_delimiters(response_json, '***')
+        decision = extract_between_delimiters(resp, '```')
+        reasoning = extract_between_delimiters(resp, '***')
 
         # Handle result dictionary
         if "ERROR NO MATCH FOUND" not in decision and "ERROR NO MATCH FOUND" not in reasoning:
@@ -135,10 +135,10 @@ class AIPlayer:
         else:
             dtr_resp["decision"] = "INVALID_FORMAT"
             dtr_resp["reasoning"] = response_json.strip()
-            raise ValueError(f"Invalid format in decision response: {dtr_resp}")
+            # raise ValueError(f"Invalid format in decision response: {dtr_resp}")
             self.logger.error(f'DTR DECISION: {dtr_resp["decision"]}')
             self.logger.error(f'DTR REASONING: {dtr_resp["reasoning"]}')
-
+        # print(dtr_resp)
         return dtr_resp
 
     async def respond(self, minutes: List[str], dtr_resp) -> str:
@@ -154,16 +154,17 @@ class AIPlayer:
 
         try:
             response_json = await asyncio.to_thread(prompter.get_completion, input_texts)
+            resp = response_json[0]
         except Exception as e:
-            raise e
+            # raise e
             self.logger.error(f"Error during response generation: {e}")
             return error_response
 
         # Use helper function to extract response between triple backticks
-        response = extract_between_delimiters(response_json, '```')
+        response = extract_between_delimiters(resp, '```')
 
         if "ERROR NO MATCH FOUND" in response:
-            self.logger.warning(f"Invalid format in response: {response_json}")
+            self.logger.warning(f"Invalid format in response: {resp}")
             return error_response
         else:
             self.logger.info(f"Generated Response: {response}")
@@ -186,17 +187,18 @@ class AIPlayer:
             return styled_response
 
         except Exception as e:
-            raise e
-
+            # raise e
             self.logger.error(f"Error during stylizing response: {e}")
             return error_response # Fallback response
 
     def handle_dialogue(self, minutes: List[str]) -> str:
         """Handles a new message by deciding whether to respond and generating a response."""
+        # print("inside handle_dialogue")
         # Step 1: Decide whether to respond
         dtr_resp = asyncio.run(
             self.decide_to_respond(minutes)
             )
+        # print(dtr_resp)
 
         # If we decide to stay silent, log the decision and return STAY SILENT
         if dtr_resp["decision"] == "STAY SILENT":
@@ -224,7 +226,7 @@ class AIPlayer:
     
     def _steal_player_state(self, player_state_to_steal: PlayerState) -> PlayerState:
         """Creates a new player state based on the given one."""
-        
+        self.humans_messages.append(player_state_to_steal.extra_info) # use the extra info as a message to mimic style
         return PlayerState(
             first_name=player_state_to_steal.first_name,
             last_initial=player_state_to_steal.last_initial,

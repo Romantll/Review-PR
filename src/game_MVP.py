@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 import os
 from prompt_toolkit.shortcuts import PromptSession
-from colorama import Fore, Style
+from colorama import init, Fore, Style
 from utils.asthetics import format_gm_message
 from utils.file_io import load_players_from_lobby
 from utils.states import GameState, PlayerState, ScreenEnum
@@ -55,12 +55,16 @@ async def refresh_messages(chat_log, gs: GameState, ps: PlayerState, delay=0.5):
                             if "GAME MASTER" in msg or "*****" in msg:
                                 colored_msg = Fore.YELLOW + msg.strip() + Style.RESET_ALL
                             else:
+                                print("Not a GM message, checking player code name...")
                                 code_name = msg.split(":", 1)[0].strip()
+                                print(code_name)
                                 player = next((p for p in gs.players if p.code_name == code_name), None)
-
+                                print(player)
                                 if player:
+                                    print("inside player check")
                                     colored_msg = f"{COLOR_DICT[player.color_name]}{msg.strip()}{Style.RESET_ALL}"
                                 else:
+                                    print("took else")
                                     colored_msg = msg.strip()
 
                             color_formatted_messages.append(colored_msg)
@@ -77,6 +81,115 @@ async def refresh_messages(chat_log, gs: GameState, ps: PlayerState, delay=0.5):
         except IOError as e:
             print(f"Error reading messages: {e}")
 
+ai_response_lock = asyncio.Lock()
+async def ai_response(chat_log, ps: PlayerState, delay=1.0):
+    """Triggers AI responses only if the last message is not from the AI."""
+    ai = ps.ai_doppleganger
+    ai_name = ai.player_state.code_name
+    ai.logger.info(f"AI {ai_name} is inside async def ai_response")
+
+    while True:
+        await asyncio.sleep(delay)
+
+        if not ai.player_state.still_in_game:
+            ai.logger.info(f"{ai_name} is no longer in the game. Exiting response loop.")
+            return
+
+        # try:
+        with open(chat_log, "r", encoding="utf-8") as f:
+            messages = [line.strip() for line in f.readlines()]
+
+        last_line = messages[-1] if messages else ""
+        # ai.logger.info(f"Last line in chat log: {last_line}")
+
+        if last_line.startswith(f"{ai_name}:"):
+            # ai.logger.info(f"Last message was from 'ME' {ai_name}, skipping response.")
+            continue  # Avoid self-reply
+
+        async with ai_response_lock:
+            try:
+                response = await asyncio.to_thread(ai.handle_dialogue, messages)
+                ai.logger.info(f"AI response: {response}")
+
+                if response not in ["STAY SILENT", "ERROR", "No response needed."]:
+                    ai_msg = f"{ai_name}: {response}\n"
+                    with open(chat_log, "a", encoding="utf-8") as f:
+                        f.write(ai_msg)
+                        f.flush()
+                    ai.logger.info("AI response written to chat log.")
+                else:
+                    ai.logger.info(f"AI {ai_name} chose not to respond.")
+
+            except Exception as e:
+                ai.logger.error(f"AI error in handle_dialogue: {e}")
+
+            except Exception as e:
+                ai.logger.error(f"Error reading chat log: {e}")
+
+
+async def user_input(chat_log, ps: PlayerState):
+    """Captures user input and writes it to the chat log."""
+    session = PromptSession()
+    while True:
+        try:
+            user_message = await session.prompt_async("")
+            formatted_message = f"{ps.code_name}: {user_message}\n"
+            with open(chat_log, "a", encoding="utf-8") as f:
+                f.write(formatted_message)
+            # Move the cursor up and clear the line to avoid "You: You:"
+            print("\033[A" + " " * len(formatted_message) + "\033[A")
+        except Exception as e:
+            pass
+            # print(f"Error getting user input: {e}")
+
+async def play_game(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[ScreenEnum, GameState, PlayerState]:
+    chat_log = gs.chat_log_path
+    # Check if the file already exists
+    if not os.path.isfile(chat_log):
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(chat_log), exist_ok=True)
+        # Create the file
+        with open(chat_log, "w") as f:
+            f.write("")
+
+    # Ask the icebreaker if you are the timekeeper (to avoid duplicate prints)
+    if gs.ice_asked <= gs.round_number: # just a safe guard. 
+        ask_icebreaker(gs, ps, chat_log)
+
+    try:
+        # Start the countdown timer without awaiting it
+        asyncio.create_task(countdown_timer(ROUND_DURATION, gs, ps, chat_log))
+
+        # Create independent tasks for each asynchronous function
+        message_task = asyncio.create_task(refresh_messages(chat_log, gs, ps))
+        ai_task = asyncio.create_task(ai_response(chat_log, ps))
+        user_input_task = asyncio.create_task(user_input(chat_log, ps))
+
+        # Continuously check if the round is complete
+        while not gs.round_complete:
+            await asyncio.sleep(0.1)  # Small delay to prevent busy-waiting
+
+        # Cancel the ongoing tasks since the round is over
+        for task in [message_task, ai_task, user_input_task]:
+            task.cancel()
+            try:
+                await task  # Wait for the cancellation to complete
+            except asyncio.CancelledError:
+                # print(f"Task {task} successfully cancelled.")
+                pass
+
+        # print("Timer ended, moving to the next round.")
+        return ScreenEnum.VOTE, gs, ps
+
+    except asyncio.CancelledError:
+        print("\nChat room closed gracefully.")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+####################################################################################################
+# OLD CODE
+####################################################################################################
+#region
 # ai_response_lock = asyncio.Lock()
 # async def ai_response(chat_log, ps: PlayerState, delay=1.0):
 #     """Triggers AI responses only if the last message is not from the AI."""
@@ -141,104 +254,4 @@ async def refresh_messages(chat_log, gs: GameState, ps: PlayerState, delay=0.5):
 #         except IOError as e:
 #             # print(f"Error in AI response loop: {e}")
 #             pass
-
-ai_response_lock = asyncio.Lock()
-async def ai_response(chat_log, ps: PlayerState, delay=1.0):
-    """Triggers AI responses only if the last message is not from the AI."""
-    ai = ps.ai_doppleganger
-    ai_name = ai.player_state.code_name
-    ai.logger.info(f"AI {ai_name} is inside async def ai_response")
-
-    while True:
-        await asyncio.sleep(delay)
-
-        if not ai.player_state.still_in_game:
-            ai.logger.info(f"{ai_name} is no longer in the game. Exiting response loop.")
-            return
-
-        try:
-            with open(chat_log, "r", encoding="utf-8") as f:
-                messages = [line.strip() for line in f.readlines()]
-
-            last_line = messages[-1] if messages else ""
-            if last_line.startswith(f"{ai_name}:"):
-                continue  # Avoid self-reply
-
-            async with ai_response_lock:
-                try:
-                    response = await asyncio.to_thread(ai.handle_dialogue, messages)
-
-                    if response not in ["STAY SILENT", "ERROR", "No response needed."]:
-                        ai_msg = f"{ai_name}: {response}\n"
-                        with open(chat_log, "a", encoding="utf-8") as f:
-                            f.write(ai_msg)
-                            f.flush()
-                        ai.logger.info("AI response written to chat log.")
-                    else:
-                        ai.logger.info(f"AI {ai_name} chose not to respond.")
-
-                except Exception as e:
-                    ai.logger.error(f"AI error in handle_dialogue: {e}")
-
-        except Exception as e:
-            ai.logger.error(f"Error reading chat log: {e}")
-
-
-async def user_input(chat_log, ps: PlayerState):
-    """Captures user input and writes it to the chat log."""
-    session = PromptSession()
-    while True:
-        try:
-            user_message = await session.prompt_async("")
-            formatted_message = f"{ps.code_name}: {user_message}\n"
-            with open(chat_log, "a", encoding="utf-8") as f:
-                f.write(formatted_message)
-            # Move the cursor up and clear the line to avoid "You: You:"
-            print("\033[A" + " " * len(formatted_message) + "\033[A")
-        except Exception as e:
-            pass
-            # print(f"Error getting user input: {e}")
-
-async def play_game(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[ScreenEnum, GameState, PlayerState]:
-    chat_log = gs.chat_log_path
-    # Check if the file already exists
-    if not os.path.isfile(chat_log):
-        # Ensure the directory exists
-        os.makedirs(os.path.dirname(chat_log), exist_ok=True)
-        # Create the file
-        with open(chat_log, "w") as f:
-            f.write("")
-
-    # Ask the icebreaker if you are the timekeeper (to avoid duplicate prints)
-    if gs.ice_asked <= gs.round_number: # just a safe guard. 
-        ask_icebreaker(gs, ps, chat_log)
-
-    try:
-        # Start the countdown timer without awaiting it
-        asyncio.create_task(countdown_timer(ROUND_DURATION, gs, ps, chat_log))
-
-        # Create independent tasks for each asynchronous function
-        message_task = asyncio.create_task(refresh_messages(chat_log, gs, ps))
-        ai_task = asyncio.create_task(ai_response(chat_log, ps))
-        user_input_task = asyncio.create_task(user_input(chat_log, ps))
-
-        # Continuously check if the round is complete
-        while not gs.round_complete:
-            await asyncio.sleep(0.1)  # Small delay to prevent busy-waiting
-
-        # Cancel the ongoing tasks since the round is over
-        for task in [message_task, ai_task, user_input_task]:
-            task.cancel()
-            try:
-                await task  # Wait for the cancellation to complete
-            except asyncio.CancelledError:
-                # print(f"Task {task} successfully cancelled.")
-                pass
-
-        # print("Timer ended, moving to the next round.")
-        return ScreenEnum.VOTE, gs, ps
-
-    except asyncio.CancelledError:
-        print("\nChat room closed gracefully.")
-    except Exception as e:
-        print(f"Unexpected error: {e}")
+#endregion

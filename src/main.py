@@ -3,7 +3,8 @@ import inspect
 import json
 import random
 import argparse
-from utils.debug import load_debug_game_state, load_debug_player_state
+from debug import debug_setup
+from utils.chatbot.ai_v5 import AIPlayer
 from utils.states import PlayerState, ScreenEnum
 from setup import collect_player_data
 from intro_screen import play_intro
@@ -30,16 +31,12 @@ def parse_args():
         help="Enable debug mode for detailed logging."
     )
     parser.add_argument(
-        "--debug_folder",
-        type=str,
-        default="./data/debug/1_player",
-        help="Specify the folder for debug data."
+        "--template_folder", type=str, default="1_player",
+        help="Name of the debug template folder (e.g., 2_player)"
     )
     parser.add_argument(
-        "--player_number",
-        type=int,
-        default=0,
-        help="Specify the player number for debugging."
+        "--player_number", type=int, default=0,
+        help="Index of the player using this terminal"
     )
     return parser.parse_args()
 
@@ -57,22 +54,16 @@ async def main():
     state_handler = {
         ScreenEnum.INTRO: play_intro,
         ScreenEnum.SETUP: collect_player_data,
+        ScreenEnum.DEBUG: debug_setup,
         ScreenEnum.CHAT: play_game,
         ScreenEnum.SCORE: score_screen,
-        ScreenEnum.VOTE: voting_round
+        ScreenEnum.VOTE: voting_round,
     }
-
-    # Initialize the starting screen state and blank game/player states.
-    if args.debug:
-        ss = ScreenEnum.CHAT
-        gs = load_debug_game_state(debug_folder=args.debug_folder)
-        gs.players = [PlayerState(**p) for p in json.load(open(f'{args.debug_folder}/players.json'))]
-
-        ps = load_debug_player_state(
-            debug_folder=args.debug_folder,
-            player_number=args.player_number
-        )
-    else:
+    
+    if args.debug: # set up the game to go straight to the chat phase
+        ss = ScreenEnum.DEBUG
+        gs = BLANK_GS
+    else: # start on the intro screen
         ss = ScreenEnum.INTRO
         gs = BLANK_GS
 
@@ -85,28 +76,30 @@ async def main():
 
     # Main game loop
     while True:
-        # Check if the current screen state has a handler function.
         if ss in state_handler:
             handler = state_handler[ss]
-            
-            # Determine if the handler is an asynchronous coroutine.
-            if inspect.iscoroutinefunction(handler):
+
+            # If we're in debug mode and in DEBUG state, pass extra args
+            if args.debug and ss == ScreenEnum.DEBUG:
+                next_state, next_gs, next_ps = handler(ss, gs, ps, args.template_folder, args.player_number)
+
+            elif inspect.iscoroutinefunction(handler):
                 next_state, next_gs, next_ps = await handler(ss, gs, ps)
+
             else:
                 next_state, next_gs, next_ps = handler(ss, gs, ps)
-            
-            # Update state variables with the results from the handler.
+
             ss = next_state
             gs = next_gs
             ps = next_ps
-            
-            # Log the state transition for debugging and tracking.
+
             master_logger.log(f"Transitioned to state: {ss}")
+
         else:
-            # Handle unexpected or invalid states.
             master_logger.error(f"Invalid game state encountered: {ss}")
             print("Invalid game state")
             break
+
 
 if __name__ == "__main__":
     # Run the main game loop using asyncio for asynchronous operations.

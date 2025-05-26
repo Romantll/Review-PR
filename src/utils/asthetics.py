@@ -42,5 +42,5 @@ def format_gm_message(msg: str) -> str:
     top = Fore.YELLOW + "*" * 50 + Fore.RESET
     mid = Fore.YELLOW + f"GAME MASTER: {msg}"+ Fore.RESET
     bot = Fore.YELLOW +"*" * 50+ Fore.RESET
-    return f"\n\n{top}\n{mid}\n{bot}"
+    return f"\n\n{top}\n{mid}\n{bot}\n"
 
