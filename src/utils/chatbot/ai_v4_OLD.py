@@ -3,12 +3,12 @@ from dataclasses import asdict
 import json
 from typing import List 
 from pydantic import BaseModel
-from .prompter import OpenAIPrompter, QAs
-from . import examples_v4 as ex4
-from . import enums_dcs_v3 as dcs3
+from .prompter_OLD import OpenAIPrompter, QAs
+from . import examples_v4_OLD as ex4
+from . import enums_dcs_v3_OLD as dcs3
 import sys
 
-from utils.chatbot import prompter
+from utils.chatbot import prompter_OLD
 sys.path.append("../../")
 from utils.states import PlayerState, GameState
 from utils.file_io import SequentialAssigner

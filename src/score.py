@@ -6,8 +6,25 @@ def score_screen(
         ss: ScreenEnum, gs: GameState, ps: PlayerState
     ) -> tuple[ScreenEnum, GameState, PlayerState]:
     """
-    Displays the game results and final scores with detailed statistics.
+    Displays the final score screen with player summaries, game statistics, and outcome.
+
+    This function is called at the end of the game to:
+    - Show all players, their roles (human or bot), and whether they were voted out.
+    - Present overall game statistics including number of rounds, players, and vote-out counts.
+    - Calculate and display the bot detection success rate.
+    - Determine and display the winning team (humans or bots).
+    - Share insights into the AI bots' behavior and prompt strategies.
+
+    Args:
+        ss (ScreenEnum): The current screen state (unused in this function).
+        gs (GameState): The game state containing players, voting data, and round info.
+        ps (PlayerState): The current player's state (used to preserve function signature).
+
+    Returns:
+        tuple[ScreenEnum, GameState, PlayerState]: Transitions to the INTRO screen along with
+        the unchanged GameState and PlayerState.
     """
+
     clear_screen()
     print(Fore.YELLOW + "=== 🏆 FINAL SCOREBOARD 🏆 ===\n" + Style.RESET_ALL)
 

@@ -1,10 +1,10 @@
 from dataclasses import asdict
 import json
-from utils.chatbot.enums_dcs_v3 import (
+from utils.chatbot.enums_dcs_v3_OLD import (
     AccusePlayerBM, DecideToRespondBM, ActionOptionBM, DefendYourselfBM, DefenseChoices, 
     IntroBM, JokeBM, OtherBM, QuestionBM, SimplePhraseBM, StylizerBM, ValidateResponseBM
 )
-from utils.chatbot.prompter import QAs
+from utils.chatbot.prompter_OLD import QAs
 from utils.states import GameState
 
 #region  GENERICS

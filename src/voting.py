@@ -16,6 +16,20 @@ from colorama import Fore, Style
 
 # Load or initialize voting data
 def get_voting_dict(gs:GameState) -> dict:
+    """
+    Loads or initializes the voting dictionary for the current game.
+
+    If a voting file already exists at the path specified in `gs.voting_path`,
+    it loads and returns its contents. Otherwise, it initializes a new voting
+    dictionary for round 0 and saves it to the file.
+
+    Args:
+        gs (GameState): The current game state containing the voting path and player list.
+
+    Returns:
+        dict: A dictionary mapping player code names to vote counts for each round.
+    """
+
     # Check if the voting file exists
     if os.path.exists(gs.voting_path):
         # Load existing voting data
@@ -32,6 +46,23 @@ def get_voting_dict(gs:GameState) -> dict:
     return vote_dict
 
 def update_voting_dict(gs: GameState, code_name:str) -> dict:
+    """
+    Updates the voting dictionary with a vote for the given player in the current round.
+
+    Increments the vote count for the specified player and writes the updated dictionary
+    back to the voting file.
+
+    Args:
+        gs (GameState): The current game state.
+        code_name (str): The code name of the player receiving the vote.
+
+    Returns:
+        dict: The updated voting dictionary.
+
+    Raises:
+        ValueError: If the given code name does not exist in the current round's vote list.
+    """
+
     vote_dict = get_voting_dict(gs)
     # Update the voting dictionary with the current round number and players
     round_key = f'votes_r{gs.round_number}'
@@ -49,6 +80,16 @@ def update_voting_dict(gs: GameState, code_name:str) -> dict:
 
 # Display the voting prompt
 def display_voting_prompt(gs) -> str:
+    """
+    Generates a formatted voting prompt listing all players in sorted order.
+
+    Args:
+        gs (GameState): The current game state with player information.
+
+    Returns:
+        str: A multi-line string prompt displaying each player with an index number.
+    """
+
     # Sort players by code name to ensure consistent order for everyone
     eligible_players = sorted(gs.players, key=lambda x: x.code_name)
     voting_options = [f'{idx + 1}: {p.code_name}' for idx, p in enumerate(eligible_players)]
@@ -56,6 +97,20 @@ def display_voting_prompt(gs) -> str:
 
 # Collect the player's vote
 def collect_vote(gs, ps) -> str:
+    """
+    Prompts the player to cast a vote for another player.
+
+    Displays the voting prompt, validates user input, and prevents players
+    from voting for themselves. Re-prompts until a valid vote is received.
+
+    Args:
+        gs (GameState): The current game state.
+        ps (PlayerState): The player casting the vote.
+
+    Returns:
+        str: The code name of the player who was voted for.
+    """
+
     eligible_players = sorted(gs.players, key=lambda x: x.code_name)
     voting_str = display_voting_prompt(gs)
 
@@ -83,6 +138,19 @@ def collect_vote(gs, ps) -> str:
     
 # Count votes and determine the outcome
 def count_votes(vote_dict: dict, gs) -> tuple[int, list]:
+    """
+    Counts votes for the current round and identifies the player(s) with the most votes.
+
+    Args:
+        vote_dict (dict): The full voting dictionary across all rounds.
+        gs (GameState): The current game state.
+
+    Returns:
+        tuple[list, int]: A tuple containing:
+            - A list of player code names who received the most votes.
+            - The number of votes they received.
+    """
+
     round_key = f'votes_r{gs.round_number}'
 
     current_vote_dict = vote_dict[round_key]
@@ -93,6 +161,22 @@ def count_votes(vote_dict: dict, gs) -> tuple[int, list]:
 # Process the voting result
 def process_voting_result(
         gs: GameState, ps: PlayerState, max_votes: int, players_voted_for_the_most: list) -> str:
+    """
+    Determines and processes the outcome of the voting round.
+
+    Handles cases where there's a tie, no votes were cast, or a single player is voted out.
+    Updates game state, modifies player elimination status, and generates a message for display.
+
+    Args:
+        gs (GameState): The current game state.
+        ps (PlayerState): The current player (used to determine if they were voted out).
+        max_votes (int): The highest number of votes received by any player.
+        players_voted_for_the_most (list): List of code names with the most votes.
+
+    Returns:
+        str: A formatted message describing the outcome of the vote.
+    """
+
     # Check for tie or no votes
     if len(players_voted_for_the_most) > 1:
         gs.last_vote_outcome = 'No consensus, no one is voted out this round.'
@@ -139,6 +223,21 @@ def process_voting_result(
     return format_gm_message("Unexpected error: No valid voting result.")
 
 def should_transition_to_score(gs: GameState) -> bool:
+    """
+    Determines whether the game should transition to the final score screen.
+
+    Transitions occur under the following conditions:
+    - No human players remain.
+    - No AI players remain.
+    - The number of completed rounds equals or exceeds the number of human players.
+
+    Args:
+        gs (GameState): The current game state.
+
+    Returns:
+        bool: True if the game should end, False otherwise.
+    """
+
     # Condition 1: No human players left
     human_players = [p for p in gs.players if p.is_human]
     if len(human_players) == 0:
@@ -159,6 +258,21 @@ def should_transition_to_score(gs: GameState) -> bool:
 
 # Main voting round function
 def voting_round(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[ScreenEnum, GameState, PlayerState]:
+    """
+    Executes a full voting round from prompting to result processing.
+
+    If the player is still in the game, they are prompted to vote. Once all players
+    have voted, the results are counted and displayed, and the game state is updated.
+    Based on game progression, the screen transitions either to the chat phase or the score screen.
+
+    Args:
+        ss (ScreenEnum): The current screen state.
+        gs (GameState): The current game state.
+        ps (PlayerState): The current player state.
+
+    Returns:
+        tuple[ScreenEnum, GameState, PlayerState]: The next screen, updated game state, and player state.
+    """
     # print(format_gm_message('Waiting for players to be ready to vote...'))
     # Collect the current player's vote if still in the game
     if ps.still_in_game:

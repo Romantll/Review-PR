@@ -8,6 +8,10 @@ from utils.states import ScreenEnum, PlayerState, GameState
 init(autoreset=True)
 
 def play_intro(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[ScreenEnum, GameState, PlayerState]:
+    """
+    Welcome players to the game with an engaging introduction screen.
+    This function displays the game's premise, rules, and objectives in a colorful and interactive manner.
+    """
     master_logger = MasterLogger.get_instance()
     master_logger.log("Starting intro screen...")
     

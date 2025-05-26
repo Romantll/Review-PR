@@ -51,6 +51,15 @@ class PlayerSetup:
             print(Fore.RED + f"{field_name} cannot be empty." + Style.RESET_ALL)
 
     def prompt_number(self, lower: int, upper: int, prompt: str, field_name: str) -> None:
+        '''
+        Prompt for a number within a specified range and ensure it is valid.
+        We use this to collect lobby number, number of players, and grade.
+        Args:
+            lower (int): The lower bound of the valid range.
+            upper (int): The upper bound of the valid range.
+            prompt (str): The prompt message to display to the user.
+            field_name (str): The name of the field to store the value in self.data.
+        '''
         while True:
             try:
                 value = int(input(Fore.CYAN + f"{prompt} ({lower} - {upper}): " + Style.RESET_ALL))
@@ -62,6 +71,9 @@ class PlayerSetup:
                 print(Fore.RED + "Invalid input. Please enter a valid number." + Style.RESET_ALL)
 
     def prompt_initial(self) -> None:
+        '''
+        Prompt for the player's last initial and ensure it is a single letter (A–Z).
+        '''
         while True:
             value = input(Fore.CYAN + "Enter your last initial (A–Z): " + Style.RESET_ALL).strip().upper()
             if len(value) == 1 and value.isalpha():
@@ -70,15 +82,33 @@ class PlayerSetup:
             print(Fore.RED + "Invalid input. Please enter a single letter (A–Z)." + Style.RESET_ALL)
 
     def run(self, gs:GameState) -> Tuple[ScreenEnum, GameState, PlayerState]:
-        """Run the player setup process."""
+        """
+        Executes the interactive player setup process and initializes player state for the game.
+
+        This method prompts the user to enter personal details (e.g., name, favorite food, hobby),
+        assigns a unique code name and color, creates a PlayerState object, and links an AI doppelganger
+        that mimics the player. It also sets up file paths in the GameState for the current lobby,
+        including the chat log, voting data, and start time file.
+
+        Args:
+            gs (GameState): The current game state object that holds shared state across players.
+
+        Returns:
+            Tuple[ScreenEnum, GameState, PlayerState]: 
+                screen enum that directs us to the CHAT phase,
+                The updated GameState with player-specific file paths and player count,
+                PlayerState for the current human player.
+        """
+
+        # prompt the player for their information
         self.prompt_number(1, 10000, "Enter your lobby number", "lobby")
         self.prompt_number(1, 5, "How many people are you playing with?", "number_of_human_players") # TODO change back to 3,5
         self.prompt_number(6, 8, "What grade are you in?", "grade")
         self.prompt_input("first_name", "Enter your first name: ")
         self.prompt_initial()
-        self.prompt_input("favorite_food", "Favorite food: ")
-        self.prompt_input("favorite_animal", "Favorite animal: ")
-        self.prompt_input("hobby", "What's your hobby? ")
+        self.prompt_input("favorite_food", "One of your favorite foods: ")
+        self.prompt_input("One of your favorite_animals", "Favorite animal: ")
+        self.prompt_input("hobby", "One of your hobbies? ")
         self.prompt_input("extra_info", "Tell us one more thing about you: ")
 
         # clear_screen()
@@ -122,6 +152,26 @@ class PlayerSetup:
         return ps, gs, ps
 
 def collect_player_data(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> Tuple[ScreenEnum, GameState, PlayerState]:
+    """
+    Handles the full player setup and synchronization process before transitioning to the chat phase.
+
+    This function:
+    - Prompts the current user (using PlayerSetup.run()) for setup information if their PlayerState has not yet been written.
+    - Initializes a corresponding AI doppelgänger for the player.
+    - Saves both the human player and AI to the lobby file.
+    - Waits until all human players have joined the lobby and their data has been saved.
+    - Synchronizes the shared game start time.
+    - Finalizes and sorts the list of players in the GameState.
+
+    Args:
+        ss (ScreenEnum): The current screen state (not modified in this function).
+        gs (GameState): The shared game state object that tracks lobby-wide data.
+        ps (PlayerState): The current player's state, which may be initialized or updated.
+
+    Returns:
+        Tuple[ScreenEnum, GameState, PlayerState]: The next screen state (CHAT),
+        the updated GameState with all players loaded, and the finalized PlayerState for the current user.
+    """
     # clear_screen()
     print(Fore.YELLOW + "\n=== Player Setup ===" + Style.RESET_ALL)
 

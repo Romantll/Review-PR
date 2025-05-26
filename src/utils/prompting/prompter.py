@@ -29,13 +29,38 @@ class QAs(BaseModel):
     answer: Union[BaseModel, str]   # Allow both strings and BaseModel
 
 class Prompter(ABC):
+    """
+    An abstract base class for building prompt-driven interfaces to large language models (LLMs).
+
+    Attributes:
+        llm_model (str): The model identifier (e.g., "gpt-4").
+        prompt_path (Optional[str]): Path to the YAML file defining prompt structure and few-shot examples.
+        prompt_headers (Dict[str, str]): Optional mapping of input keys to display labels.
+        temperature (float): Temperature used for model generation.
+        output_format_class (Type[BaseModel] or str): Expected output structure.
+        examples (List[QAs]): Few-shot examples loaded from YAML.
+        system_prompt (str): The system message for chat-based models.
+        main_prompt_header (str): Optional string prepended to each prompt.
+        is_structured_output (bool): Whether output should be parsed as structured JSON.
+    """
+
     def __init__(
+            
         self,
         prompt_path: Optional[str],
         prompt_headers: Dict[str, str],
         llm_model: str = "gpt-4o-mini",
         temperature: float = 0.1,
     ):
+        """
+        Initializes the prompter by loading the YAML config, few-shot examples, and model schema.
+
+        Args:
+            prompt_path (Optional[str]): Path to a YAML file defining prompt structure and examples.
+            prompt_headers (Dict[str, str]): Dictionary of display names for input fields.
+            llm_model (str): Name or ID of the language model (default "gpt-4o-mini").
+            temperature (float): Temperature for generation sampling.
+        """
         self.llm_model = llm_model
         self.prompt_path = prompt_path
         self.prompt_headers = prompt_headers
@@ -58,6 +83,18 @@ class Prompter(ABC):
         return f"Prompter(model={self.llm_model}, examples={len(self.examples)})"
 
     def _load_yaml_examples_with_model(self) -> Tuple[Type[BaseModel], List[QAs], str, str, Dict[str, str], bool]:
+        """
+        Loads and parses the YAML file containing system prompt, prompt headers, and examples.
+
+        Returns:
+            Tuple containing:
+                - The output model class (or `str` for unstructured outputs)
+                - The list of QAs examples
+                - The system prompt string
+                - The main prompt header
+                - A dict of prompt headers
+                - A bool indicating structured output mode
+        """
         with open(self.prompt_path, "r") as f:
             raw = yaml.safe_load(f)
 
@@ -98,7 +135,15 @@ class Prompter(ABC):
         return model_class, examples, system_prompt, main_prompt_header, prompt_headers, is_structured
 
     def format_q_as_string(self, question_dict: Dict[str, str]) -> str:
-        """Formats multiple question fields for the LLM"""
+        """
+        Formats the user's question fields into a single prompt string.
+
+        Args:
+            question_dict (Dict[str, str]): A mapping of input field names to values.
+
+        Returns:
+            str: A formatted string ready for prompting the LLM.
+        """
         formatted_questions = "\n\n".join(
             f"{self.prompt_headers.get(key, key).upper()}: {value}" for key, value in question_dict.items()
         )
@@ -119,7 +164,9 @@ class Prompter(ABC):
         return prompt
 
     def format_examples(self):
-        """Formats few-shot examples by prepending prompt headers"""
+        """
+        Applies formatting to the loaded few-shot examples using the defined prompt headers.
+        """
         for qa in self.examples:
             qa.question = self.format_q_as_string(qa.question)
             if isinstance(qa.answer, BaseModel):
@@ -127,22 +174,49 @@ class Prompter(ABC):
 
     @abstractmethod
     def parse_output(self, llm_output: str):
-        """Extract response-text from the LLM output"""
+        """
+        Abstract method for parsing the raw LLM output.
+
+        Args:
+            llm_output (str): The output from the LLM.
+
+        Returns:
+            The parsed result, either a dictionary or string.
+        """
         pass
 
     @abstractmethod
     def get_completion(self, user_inputs: Dict[str, str]) -> str:
-        """Send the prompt to the LLM and get a response"""
+        """
+        Abstract method to submit the formatted prompt to the model and return its output.
+
+        Args:
+            user_inputs (Dict[str, str]): Inputs for the prompt.
+
+        Returns:
+            str: Raw output from the LLM.
+        """
         pass
 
 # === OpenAI Implementation ===
 class OpenAIPrompter(Prompter):
+    """
+    Concrete implementation of the Prompter base class using OpenAI's chat completion API.
+    """
     def __init__(self, llm_model="gpt-4o-mini", **kwargs):
         super().__init__(**kwargs)
         self.client = openai.Client(api_key=self._load_env())
 
     def _load_env(self) -> str:
-        """Loads API key from .env"""
+        """
+        Loads the OpenAI API key from a `.env` file located at `./resources/.env`.
+
+        Returns:
+            str: The API key string.
+
+        Raises:
+            ValueError: If the key is missing from the environment.
+        """
         load_dotenv("./resources/.env")
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -150,7 +224,15 @@ class OpenAIPrompter(Prompter):
         return api_key
     
     def parse_output(self, llm_output) -> Union[str, dict]:
-        """Parses LLM output based on structured/unstructured mode"""
+        """
+        Parses the LLM output depending on whether structured mode is active.
+
+        Args:
+            llm_output: The response object returned from the OpenAI API.
+
+        Returns:
+            Union[str, dict]: A parsed JSON object or raw string.
+        """
         content = llm_output.choices[0].message.content.strip()
 
         if self.is_structured_output:
@@ -162,13 +244,31 @@ class OpenAIPrompter(Prompter):
             return content  # raw string
         
     def add_image(self, input_dict: Dict[str, str], image_path: str):
+        """
+        Encodes a PNG image as base64 and adds it to the input dictionary under `__image__`.
+
+        Args:
+            input_dict (Dict[str, str]): The input dictionary to augment.
+            image_path (str): Path to the image file.
+        """
         with open(image_path, "rb") as img:
             base64_img = base64.b64encode(img.read()).decode("utf-8")
         input_dict["__image__"] = f"data:image/png;base64,{base64_img}"
 
 
     def _build_messages(self, input_texts: Dict[str, str]):
-        """Builds the messages list for the OpenAI API with few-shot examples and the final input."""
+        """
+        Constructs a list of chat-style message dictionaries for OpenAI's API.
+
+        Includes system prompt, few-shot examples, and final user input.
+        Automatically handles image attachments.
+
+        Args:
+            input_texts (Dict[str, str]): The current user input.
+
+        Returns:
+            List[Dict]: The formatted message sequence.
+        """
         messages = [{"role": "system", "content": self.system_prompt}]
 
         # Add few-shot examples (already pre-formatted)
@@ -205,7 +305,17 @@ class OpenAIPrompter(Prompter):
 
     def get_completion(
             self, input_texts: Dict[str, str], parse=True, verbose=False) -> Union[dict, None]:
-        """Calls OpenAI API with multiple formatted inputs"""
+        """
+        Sends a prompt to the OpenAI chat API and returns the parsed or raw response.
+
+        Args:
+            input_texts (Dict[str, str]): Dictionary of input fields for the prompt.
+            parse (bool): Whether to parse the response or return raw.
+            verbose (bool): Whether to print the response to console.
+
+        Returns:
+            Union[dict, None]: The parsed response, or None on failure.
+        """
         input_text_str = self._build_messages(input_texts)
         completion_kwargs = {
             "model": self.llm_model,
@@ -237,16 +347,16 @@ class OpenAIPrompter(Prompter):
         sleep_between: float = 0.0
     ) -> List[Union[str, dict]]:
         """
-        Concurrently generate completions for a list of inputs using ThreadPoolExecutor.
-        
+        Runs multiple prompt generations concurrently using threads.
+
         Args:
-            inputs (List[Dict[str, str]]): List of user inputs.
-            max_workers (int): Max number of parallel requests.
-            verbose (bool): Print LLM responses.
-            sleep_between (float): Seconds to wait between launching requests (to avoid bursts).
+            inputs (List[Dict[str, str]]): List of user input dictionaries.
+            max_workers (int): Max number of parallel threads.
+            verbose (bool): Whether to print each output.
+            sleep_between (float): Seconds to sleep between request launches.
 
         Returns:
-            List[Union[str, dict]]: Parsed completions.
+            List[Union[str, dict]]: List of parsed model outputs (or error messages).
         """
         results = [None] * len(inputs)
 

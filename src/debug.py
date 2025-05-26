@@ -13,18 +13,53 @@ from utils.file_io import (
 from utils.constants import COLOR_DICT
 
 TEMPLATE_BASE = "./data/debug/templates"
-RUNTIME_LOBBY_BASE = "./data/debug/lobbies"
+DEBUG_LOBBY_BASE = "./data/debug/lobbies"
 
 def get_next_lobby_id() -> int:
-    existing = [int(d.split("_")[-1]) for d in os.listdir(RUNTIME_LOBBY_BASE) if d.startswith("lobby_")]
+    """
+    Scans the debug lobby directory and determines the next available lobby ID.
+
+    Returns:
+        int: The next sequential lobby ID based on existing 'lobby_x' folders.
+    """
+
+    existing = [int(d.split("_")[-1]) for d in os.listdir(DEBUG_LOBBY_BASE) if d.startswith("lobby_")]
     return max(existing, default=-1) + 1
 
 def create_lobby_dir(lobby_id: int) -> str:
-    lobby_path = os.path.join(RUNTIME_LOBBY_BASE, f"lobby_{lobby_id}")
+    """
+    Creates a new directory for the specified debug lobby ID.
+
+    Args:
+        lobby_id (int): The ID of the lobby to create.
+
+    Returns:
+        str: The full path to the created lobby directory.
+    """
+    lobby_path = os.path.join(DEBUG_LOBBY_BASE, f"lobby_{lobby_id}")
     os.makedirs(lobby_path, exist_ok=True)
     return lobby_path
 
 def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, template_folder: str, player_number: int) -> tuple:
+    """
+    Initializes the debug setup for a single player using pre-defined template data.
+
+    This function loads a specific player's data from a debug template, assigns them a code name and color,
+    sets up a file-based lobby environment (including chat, voting, and start time files), and
+    initializes both the player and their AI doppelgänger. The timekeeper is responsible for creating
+    the lobby and synchronizing the start time, while other players wait for setup to complete.
+
+    Args:
+        ss (ScreenEnum): The current screen state (unused but included for consistency).
+        gs (GameState): The shared game state object to be updated with player and lobby data.
+        ps (PlayerState): The player's state object, to be populated with template data.
+        template_folder (str): The name of the debug template folder to load player data from.
+        player_number (int): The index of the player within the template file.
+
+    Returns:
+        tuple: A tuple of (ScreenEnum.CHAT, updated GameState, initialized PlayerState)
+    """
+
     logger = MasterLogger.get_instance()
 
     # Load template data
@@ -44,10 +79,10 @@ def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, template_folder:
     else:
         # Wait for timekeeper to create lobby
         while True:
-            lobby_ids = sorted([int(d.split("_")[-1]) for d in os.listdir(RUNTIME_LOBBY_BASE) if d.startswith("lobby_")])
+            lobby_ids = sorted([int(d.split("_")[-1]) for d in os.listdir(DEBUG_LOBBY_BASE) if d.startswith("lobby_")])
             if lobby_ids:
                 lobby_id = max(lobby_ids)
-                lobby_path = os.path.join(RUNTIME_LOBBY_BASE, f"lobby_{lobby_id}")
+                lobby_path = os.path.join(DEBUG_LOBBY_BASE, f"lobby_{lobby_id}")
                 if os.path.exists(os.path.join(lobby_path, "players.json")):
                     break
             sleep(1)

@@ -9,6 +9,18 @@ from utils.states import GameState, PlayerState, ScreenEnum
 from utils.constants import COLOR_DICT, ROUND_DURATION
 
 def ask_icebreaker(gs, ps, chat_log):
+    """
+    Displays and logs the current icebreaker question for players to answer.
+
+    If the player is the designated timekeeper, the icebreaker is written to the shared chat log.
+    The question is also printed to the terminal for visibility. The function updates the game state
+    by incrementing the `ice_asked` counter and removing the used icebreaker from the list.
+
+    Args:
+        gs (GameState): The current game state, including the list of icebreaker questions.
+        ps (PlayerState): The player initiating the action (typically the timekeeper).
+        chat_log (str): Path to the shared chat log file.
+    """
     intro_msg = format_gm_message(gs.icebreakers[0])
     if ps.timekeeper:
         with open(chat_log, "a", encoding="utf-8") as f:
@@ -19,6 +31,20 @@ def ask_icebreaker(gs, ps, chat_log):
     print(intro_msg.strip())
 
 async def countdown_timer(duration: int, gs: GameState, ps: PlayerState, chat_log: str):
+    """
+    Starts an asynchronous countdown timer for the current round.
+
+    Calculates the remaining time based on the player's `starttime`, sleeps until time is up,
+    and updates the game state to mark the round as complete. If the player is the timekeeper,
+    a "Time's up" message is written to the chat log.
+
+    Args:
+        duration (int): Total round duration in seconds.
+        gs (GameState): The current game state object.
+        ps (PlayerState): The player running the timer (used to check timekeeper role).
+        chat_log (str): Path to the shared chat log file.
+    """
+
     elapsed = (datetime.now() - ps.starttime).total_seconds()
     remaining = max(0, duration - int(elapsed))
 
@@ -33,7 +59,20 @@ async def countdown_timer(duration: int, gs: GameState, ps: PlayerState, chat_lo
             f.flush()
 
 async def refresh_messages(chat_log, gs: GameState, ps: PlayerState, delay=0.5):
-    """Prints only new messages from the chat log."""
+    """
+    Continuously monitors the chat log and prints newly added messages with color formatting.
+
+    Differentiates between GAME MASTER messages and player messages. Player messages are color-coded
+    based on the sender's assigned color. Runs indefinitely on an async loop with a specified delay
+    between updates.
+
+    Args:
+        chat_log (str): Path to the shared chat log file.
+        gs (GameState): The current game state, including player metadata for coloring.
+        ps (PlayerState): The current player (unused in logic but passed for consistency).
+        delay (float): Optional delay (in seconds) between refresh cycles. Default is 0.5.
+    """
+
     num_lines = 0
     # Check if the file already exists
     if os.path.isfile(chat_log):
@@ -83,7 +122,19 @@ async def refresh_messages(chat_log, gs: GameState, ps: PlayerState, delay=0.5):
 
 ai_response_lock = asyncio.Lock()
 async def ai_response(chat_log, ps: PlayerState, delay=1.0):
-    """Triggers AI responses only if the last message is not from the AI."""
+    """
+    Monitors the chat log and generates AI responses when appropriate.
+
+    This asynchronous loop continuously checks the latest chat message and, if the message
+    was not authored by the AI, prompts the AI doppelgänger to respond using its
+    `handle_dialogue` method. If the response is valid, it is appended to the chat log.
+    The function uses an async lock to prevent concurrent AI responses across multiple threads.
+
+    Args:
+        chat_log (str): Path to the shared chat log file.
+        ps (PlayerState): The player whose AI doppelgänger should respond.
+        delay (float): Time in seconds to wait between each check. Default is 1.0.
+    """
     ai = ps.ai_doppleganger
     ai_name = ai.player_state.code_name
     ai.logger.info(f"AI {ai_name} is inside async def ai_response")
@@ -128,7 +179,18 @@ async def ai_response(chat_log, ps: PlayerState, delay=1.0):
 
 
 async def user_input(chat_log, ps: PlayerState):
-    """Captures user input and writes it to the chat log."""
+    """
+    Captures real-time user input and writes it to the chat log.
+
+    This function runs in an asynchronous loop using a prompt session to receive user input
+    without blocking the main event loop. Each message is formatted with the player's code name
+    and written to the shared chat log. It also clears the input line visually for cleaner UX.
+
+    Args:
+        chat_log (str): Path to the shared chat log file.
+        ps (PlayerState): The player providing the input.
+    """
+
     session = PromptSession()
     while True:
         try:
@@ -143,6 +205,25 @@ async def user_input(chat_log, ps: PlayerState):
             # print(f"Error getting user input: {e}")
 
 async def play_game(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[ScreenEnum, GameState, PlayerState]:
+    """
+    Runs the main game loop for a single round of chat-based interaction.
+
+    This function:
+    - Initializes the chat log file if it doesn't exist.
+    - Asks the current icebreaker question (if the round has just started).
+    - Launches asynchronous tasks for message display, AI responses, and user input.
+    - Runs a countdown timer and monitors for round completion.
+    - Gracefully cancels all active tasks once the round ends.
+
+    Args:
+        ss (ScreenEnum): The current screen state (not updated in this function).
+        gs (GameState): The shared game state, including chat paths and player data.
+        ps (PlayerState): The current player's state.
+
+    Returns:
+        tuple: A tuple of (ScreenEnum.VOTE, updated GameState, updated PlayerState).
+    """
+
     chat_log = gs.chat_log_path
     # Check if the file already exists
     if not os.path.isfile(chat_log):
