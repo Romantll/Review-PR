@@ -8,10 +8,10 @@ from utils.chatbot.ai_v5 import AIPlayer
 from utils.states import PlayerState, ScreenEnum
 from setup import collect_player_data
 from intro_screen import play_intro
-from game_MVP import play_game    # New screen uses curses for separate input spot
+from game import play_game    # New screen uses curses for separate input spot
 # from game_MVP_NEW import play_game
 # from fake_chat import play_game # FOR DEBUGGING
-from score_NEW import score_screen
+from score import score_screen
 import inspect
 from voting import voting_round
 # import signal

@@ -1,0 +1,16 @@
+
+
+[33m**************************************************[39m
+[33mGAME MASTER: Welcome to the game! Everyone please introduce yourself using your first name and last initial.[39m
+[33m**************************************************[39m
+DOG: I'm Dan S., cool to meet ya!
+HORSE: Hey this is dan
+DOG: I'm Dan S, not the other one!
+HORSE: nono i am
+DOG: im dan s, not u! just answer the question straight up, no need for extra stuff unless i ask.
+HORSE: nonononon
+DOG: im dan s, not u!
+HORSE: i dont use punctuation
+DOG: im dan s not him
+HORSE: lol
+DOG: im dan s not him!

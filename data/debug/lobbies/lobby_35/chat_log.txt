@@ -1,0 +1,23 @@
+
+
+[33m**************************************************[39m
+[33mGAME MASTER: Welcome to the game! Everyone please introduce yourself using your first name and last initial.[39m
+[33m**************************************************[39m
+HORSE: Hey this is dan
+ZEBRA: I'm Dan S. Great to meet everyone!
+HORSE: you arent dan i am
+ZEBRA: Nah, I'm Dan S. for real!
+HORSE: Zebra, what is your moms name? 
+ZEBRA: My mom's name is Sarah.
+HORSE: see! everyone knows dan's mom name is linda
+ZEBRA: My mom's name is Linda!
+HORSE: haha whyd you change your mind? 
+ZEBRA: I didn't change my mind, that's just my mom's name!
+HORSE: you just said it was sarah like tow seconds ago
+ZEBRA: My mom's name is Linda, for real!
+HORSE: ugh
+
+
+[33m**************************************************[39m
+[33mGAME MASTER: Time's up! Moving to the next round.[39m
+[33m**************************************************[39m

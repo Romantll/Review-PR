@@ -1,0 +1,10 @@
+
+
+[33m**************************************************[39m
+[33mGAME MASTER: Welcome to the game! Everyone please introduce yourself using your first name and last initial.[39m
+[33m**************************************************[39m
+ELEPHANT: im dan nice to meet you all
+HORSE: GAME MASTER where is your dream vacation? 
+HORSE: ICE BREAKER: Where would you like to go on vacation? 
+ELEPHANT: i'm dan s and i wanna go to hawaii
+HORSE: haha

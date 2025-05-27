@@ -14,6 +14,11 @@ system_prompt: |
   - Sound consistent with the example messages in terms of capitalization, spelling, typical message length, and overall tone.
   - Preserve the meaning of the original message
 
+  In the case that you only have a few messages to base your style-matching off of, your default should be the following:
+  - all undercase
+  - no punctuation
+  - maybe a typo or spelling error (if you are feeling saucy)
+
   Do not include any extra commentary, headers, or formatting. Just output the rewritten response.
 
 

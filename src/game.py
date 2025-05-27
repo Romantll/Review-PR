@@ -1,6 +1,7 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, time
 import os
+import random
 from prompt_toolkit.shortcuts import PromptSession
 from colorama import init, Fore, Style
 from utils.asthetics import format_gm_message
@@ -163,6 +164,8 @@ async def ai_response(chat_log, ps: PlayerState, delay=1.0):
                 ai.logger.info(f"AI response: {response}")
 
                 if response not in ["STAY SILENT", "ERROR", "No response needed."]:
+                            # pause for a second
+
                     ai_msg = f"{ai_name}: {response}\n"
                     with open(chat_log, "a", encoding="utf-8") as f:
                         f.write(ai_msg)

@@ -1,4 +1,6 @@
 import asyncio
+from datetime import time
+import random
 import re
 from dataclasses import asdict
 import json
@@ -90,7 +92,7 @@ class AIPlayer:
                     "minutes": "HERE IS THE CONVERSATION SO FAR",
                     "reasoning": "YOU HAVE DECIDED TO ANSWER FOR THE FOLLOWING REASONIG"
                     },
-                temperature=0.5,
+                temperature=0.7,
                 llm_model="gpt-4.1-mini",
             ),
               "stylizer": OpenAIPrompter(
