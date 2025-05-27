@@ -1,0 +1,27 @@
+__meta__:
+  output_model: str
+
+system_prompt: |
+  You are a helpful assistant. Given a question and some context, answer the question as clearly and concisely as possible using only relevant information from the context.
+
+main_prompt_header: |
+  Answer the question using the context below.
+
+examples:
+  - input:
+      question: What is the capital of France?
+      context: "France is a country in Europe. Its capital is Paris."
+    output: |
+      The answer is Paris.
+
+  - input:
+      question: What color is the sky on a clear day?
+      context: "On clear days, the sky is typically blue due to Rayleigh scattering."
+    output: |
+      The answer is blue.
+
+  - input:
+      question: Who wrote 'Pride and Prejudice'?
+      context: "Jane Austen is the author of several novels, including 'Pride and Prejudice' and 'Emma'."
+    output: |
+      The answer is Jane Austen.

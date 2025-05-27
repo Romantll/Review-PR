@@ -1,0 +1,9 @@
+
+
+[33m**************************************************[39m
+[33mGAME MASTER: Welcome to the game! Everyone please introduce yourself using your first name and last initial.[39m
+[33m**************************************************[39m
+HORSE: hey this is dan
+FISH: Hey guys! I'm Dan S., in 6th grade. I’m all about tuna sandwiches, boxing, and board games. I do dog agility with my wife, Paige, and we’ve got a Border Collie. Can’t wait to play with you all!
+HORSE: ? No I am dan s
+FISH: Nah, I'm the real Dan S.! Just so you know, I’m all about tuna sandwiches, boxing, and board games. I do dog agility with my wife Paige and our Border Collie. Let’s sort this out!
