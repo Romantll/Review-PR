@@ -79,6 +79,7 @@ class GameState:
     player_path: str = ""           # Path to the player file
     chat_log: str = ""              # Chat log content
     voting_log: str = ""            # Voting log content
+    vote_records: dict = field(default_factory=dict)  # Records of votes
     chat_complete: bool = False      # Flag to indicate if the chat is complete
     voting_complete: bool = False    # Flag to indicate if the voting is complete
     round_complete: bool = False

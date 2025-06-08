@@ -51,6 +51,7 @@ class Prompter(ABC):
         prompt_headers: Dict[str, str],
         llm_model: str = "gpt-4o-mini",
         temperature: float = 0.1,
+        show_prompts = False
     ):
         """
         Initializes the prompter by loading the YAML config, few-shot examples, and model schema.
@@ -66,7 +67,7 @@ class Prompter(ABC):
         self.prompt_headers = prompt_headers
         self.temperature = temperature
         self.first_print = True
-        self.show_prompts = True  # Set to False to disable prompt printing
+        self.show_prompts = show_prompts  # Set to False to disable prompt printing
         (
             self.output_format_class,
             self.examples,

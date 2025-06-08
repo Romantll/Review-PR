@@ -15,68 +15,44 @@ from utils.file_io import synchronize_start_time
 from colorama import Fore, Style
 
 # Load or initialize voting data
-def get_voting_dict(gs:GameState) -> dict:
+def get_vote_records(gs: GameState) -> dict:
     """
-    Loads or initializes the voting dictionary for the current game.
+    Loads or initializes the vote_records dictionary from the voting file.
 
-    If a voting file already exists at the path specified in `gs.voting_path`,
-    it loads and returns its contents. Otherwise, it initializes a new voting
-    dictionary for round 0 and saves it to the file.
-
-    Args:
-        gs (GameState): The current game state containing the voting path and player list.
+    If it exists, it loads the detailed vote records (as a list per round).
+    Otherwise, it initializes it as an empty dict and writes it to disk.
 
     Returns:
-        dict: A dictionary mapping player code names to vote counts for each round.
+        dict: The full vote records dictionary.
     """
-
-    # Check if the voting file exists
     if os.path.exists(gs.voting_path):
-        # Load existing voting data
         with open(gs.voting_path, 'r') as f:
-            vote_dict = json.load(f)
+            vote_records = json.load(f)
     else:
-        # Initialize voting data if file doesn't exist
-        vote_dict = {
-            'votes_r0': {p.code_name: 0 for p in gs.players}
-        }
-        # Save the initialized voting data to the file
+        vote_records = {}
         with open(gs.voting_path, 'w') as f:
-            json.dump(vote_dict, f, indent=4)
-    return vote_dict
+            json.dump(vote_records, f, indent=4)
+    return vote_records
 
-def update_voting_dict(gs: GameState, code_name:str) -> dict:
+def update_vote_records(gs: GameState, vote_record: dict) -> dict:
     """
-    Updates the voting dictionary with a vote for the given player in the current round.
-
-    Increments the vote count for the specified player and writes the updated dictionary
-    back to the voting file.
-
-    Args:
-        gs (GameState): The current game state.
-        code_name (str): The code name of the player receiving the vote.
+    Appends a single vote record to the vote log for this round.
 
     Returns:
-        dict: The updated voting dictionary.
-
-    Raises:
-        ValueError: If the given code name does not exist in the current round's vote list.
+        dict: The updated vote records dictionary.
     """
+    vote_key = f"votes_r{gs.round_number}"
+    vote_records = get_vote_records(gs)
 
-    vote_dict = get_voting_dict(gs)
-    # Update the voting dictionary with the current round number and players
-    round_key = f'votes_r{gs.round_number}'
-    if round_key not in vote_dict:
-        vote_dict[round_key] = {p.code_name: 0 for p in gs.players}
-    # Increment the vote count for the chosen player
-    if code_name in vote_dict[round_key]:
-        vote_dict[round_key][code_name] += 1
-    else:
-        raise ValueError(f"Player {code_name} not found in voting dictionary.")
-    # Save the updated voting data to the file
+    if vote_key not in vote_records:
+        vote_records[vote_key] = []
+
+    vote_records[vote_key].append(vote_record)
+
     with open(gs.voting_path, 'w') as f:
-        json.dump(vote_dict, f, indent=4)
-    return vote_dict
+        json.dump(vote_records, f, indent=4)
+
+    return vote_records
 
 # Display the voting prompt
 def display_voting_prompt(gs) -> str:
@@ -96,67 +72,67 @@ def display_voting_prompt(gs) -> str:
     return f'Select a player to vote out by number:\n' + '\n'.join(voting_options) + '\n> '
 
 # Collect the player's vote
-def collect_vote(gs, ps) -> str:
-    """
-    Prompts the player to cast a vote for another player.
-
-    Displays the voting prompt, validates user input, and prevents players
-    from voting for themselves. Re-prompts until a valid vote is received.
-
-    Args:
-        gs (GameState): The current game state.
-        ps (PlayerState): The player casting the vote.
-
-    Returns:
-        str: The code name of the player who was voted for.
-    """
-
+def collect_vote(gs: GameState, ps: PlayerState) -> str:
     eligible_players = sorted(gs.players, key=lambda x: x.code_name)
     voting_str = display_voting_prompt(gs)
 
-    while True: 
+    # Define vote key for this round
+    vote_key = f"votes_r{gs.round_number}"
+    if vote_key not in gs.vote_records:
+        gs.vote_records[vote_key] = []
+
+    while True:
         try:
-            clear_screen()
-            print(format_gm_message(
-                "All players present! It's time to vote! Choose the player you most believe is an AI."))
-            print(Fore.GREEN + f"remember you are playing as {ps.code_name}".upper() + Style.RESET_ALL)
-            vote = int(input(voting_str))
+            vote_index = int(input(voting_str)) - 1
+            voted_player = eligible_players[vote_index]
 
-            if 1 <= vote <= len(eligible_players):
-                if eligible_players[vote - 1].code_name == ps.code_name:
-                    print('You cannot vote for yourself. Please choose another player.')
-                    input(Fore.MAGENTA + 'Press Enter to try again...' + Style.RESET_ALL)
-                    continue
-                return eligible_players[vote - 1].code_name
+            if voted_player.code_name == ps.code_name:
+                print("You cannot vote for yourself.")
+                continue
 
-            print('Invalid choice. Please enter a number from the list.')
-            input('Press Enter to try again...')
-        except ValueError:
-            print('Invalid input. Please enter a number.')
-            input('Press Enter to try again...')
+            # Determine display name
+            if voted_player.is_human:
+                voted_name = f"{voted_player.first_name} {voted_player.last_initial}"
+            else:
+                voted_name = f"{voted_player.first_name} {voted_player.last_initial} (AI)"
 
+            vote_record = {
+                "voter_name": f"{ps.first_name} {ps.last_initial}",
+                "is_human": ps.is_human,
+                "codename": ps.code_name,
+                "voted_for_code_name": voted_player.code_name,
+                "voted_for_name": voted_name,
+                "voted_for_ai": not voted_player.is_human,
+            }
+
+            gs.vote_records[vote_key].append(vote_record)
+            update_vote_records(gs, vote_record)
+
+            return voted_player.code_name
+
+        except (ValueError, IndexError):
+            print("Invalid choice. Please enter a number from the list.")
     
 # Count votes and determine the outcome
-def count_votes(vote_dict: dict, gs) -> tuple[int, list]:
-    """
-    Counts votes for the current round and identifies the player(s) with the most votes.
+from collections import Counter
 
-    Args:
-        vote_dict (dict): The full voting dictionary across all rounds.
-        gs (GameState): The current game state.
+def count_votes(vote_records: dict, gs: GameState) -> tuple[int, list]:
+    """
+    Tallies votes from vote records for the current round.
 
     Returns:
-        tuple[list, int]: A tuple containing:
-            - A list of player code names who received the most votes.
-            - The number of votes they received.
+        tuple: (number of votes received, list of player code names with most votes)
     """
+    round_key = f"votes_r{gs.round_number}"
+    vote_list = vote_records.get(round_key, [])
 
-    round_key = f'votes_r{gs.round_number}'
+    tally = Counter(v["voted_for_code_name"] for v in vote_list)
+    if not tally:
+        return 0, []
 
-    current_vote_dict = vote_dict[round_key]
-    max_votes = max(current_vote_dict.values())
-    players_voted_for_the_most = [p for p, votes in current_vote_dict.items() if votes == max_votes]
-    return players_voted_for_the_most, max_votes
+    max_votes = max(tally.values())
+    top_voted = [code for code, count in tally.items() if count == max_votes]
+    return max_votes, top_voted
 
 # Process the voting result
 def process_voting_result(
@@ -181,6 +157,14 @@ def process_voting_result(
     if len(players_voted_for_the_most) > 1:
         gs.last_vote_outcome = 'No consensus, no one is voted out this round.'
         result = format_gm_message(gs.last_vote_outcome)
+        result = (
+            Fore.RED +
+            "****************************************************************\n" +
+            f'No consensus, no one is voted out this round.'.upper() + "\n" +
+            "****************************************************************" +
+            Style.RESET_ALL
+        )
+
         return result
 
     # If no votes were cast, no one is voted out
@@ -193,11 +177,10 @@ def process_voting_result(
     voted_out_code_name = players_voted_for_the_most[0]
     voted_out_player = next((p for p in gs.players if p.code_name == voted_out_code_name), None)
 
+    # if there wasn't a bug and we found a player to vote out
     if voted_out_player:
         # Mark the voted-out player as no longer in the game in the global state
-        # print("THERE IS A VOTE OUT!")
-        # print(f"{voted_out_code_name} has been voted out!")
-
+        # Update the game state
         voted_out_player.still_in_game = False
         gs.players = [p for p in gs.players if p.code_name != voted_out_code_name]
         gs.players_voted_off.append(voted_out_player)
@@ -210,6 +193,17 @@ def process_voting_result(
                 Fore.RED +
                 "****************************************************************\n" +
                 f'You {ps.code_name} have been voted out! Please stay and observe'.upper() + "\n" +
+                "****************************************************************" +
+                Style.RESET_ALL
+            )
+        
+        # If the current players AI was voted out, make sure they are disabled
+        elif ps.ai_doppleganger.player_state.code_name == voted_out_code_name:
+            ps.ai_doppleganger.player_state.still_in_game = False
+            result = (
+                Fore.GREEN +
+                "****************************************************************\n" +
+                f'Congratulations! Your doppelbot ({ps.ai_doppleganger.player_state.code_name}) has been voted out!'.upper() + "\n" +
                 "****************************************************************" +
                 Style.RESET_ALL
             )
@@ -276,9 +270,8 @@ def voting_round(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[Screen
     # print(format_gm_message('Waiting for players to be ready to vote...'))
     # Collect the current player's vote if still in the game
     if ps.still_in_game:
-        who_player_voted_for = collect_vote(gs, ps)
-        # Increment the vote count for the chosen player
-        vote_dict = update_voting_dict(gs, who_player_voted_for)
+        # who_player_voted_for = collect_vote(gs, ps)
+        pass
     else:
         print(
             Fore.YELLOW +
@@ -292,11 +285,13 @@ def voting_round(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[Screen
     print_str = ''
     while True:
         # Refresh the vote data
-        vote_dict = get_voting_dict(gs)
-        current_round_vote_dict = vote_dict.get(f'votes_r{gs.round_number}', {})
+        vote_dict = get_vote_records(gs)
+        current_round_vote_lst = vote_dict.get(f'votes_r{gs.round_number}', {})
 
         # Count the total number of votes cast
-        num_votes = sum(current_round_vote_dict.values())
+        print(current_round_vote_lst)
+        # input(f"Press Enter to continue to next phase... {ps.code_name} has voted for {who_player_voted_for}")
+        num_votes = len(current_round_vote_lst)
 
         # Update the printed message only if it changes
         new_str = f'{num_votes}/{len(human_players)} players have voted.'
@@ -314,12 +309,14 @@ def voting_round(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[Screen
     print('All votes received. Proceeding to counting...')
 
     # Count votes and process the result
-    players_voted_for_the_most, max_votes = count_votes(vote_dict, gs)
+    max_votes, players_voted_for_the_most, = count_votes(vote_dict, gs)
     result = process_voting_result(gs, ps, max_votes, players_voted_for_the_most)
 
     # Verify if the current player has been voted out
     if ps.code_name not in [p.code_name for p in gs.players if p.still_in_game]:
         ps.still_in_game = False
+
+    # Print the result of the voting round
     dramatic_print(result)
 
     # Increment the round number after processing the result

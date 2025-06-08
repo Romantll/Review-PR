@@ -107,7 +107,7 @@ class PlayerSetup:
         self.prompt_input("first_name", "Enter your first name: ")
         self.prompt_initial()
         self.prompt_input("favorite_food", "One of your favorite foods: ")
-        self.prompt_input("One of your favorite_animals", "Favorite animal: ")
+        self.prompt_input("favorite_animal", "One of your favorite_animals: ")
         self.prompt_input("hobby", "One of your hobbies? ")
         self.prompt_input("extra_info", "Tell us one more thing about you: ")
 
@@ -127,6 +127,8 @@ class PlayerSetup:
         # Create the PlayerState object
         code_name = self.code_name_assigner.assign()
         color_name = self.color_assigner.assign()
+        # for k, v in self.data.items():
+            # print(k, v)
         ps = PlayerState(
             lobby_id=self.data["lobby"],
             first_name=self.data["first_name"],
@@ -175,7 +177,6 @@ def collect_player_data(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> Tuple
     # clear_screen()
     print(Fore.YELLOW + "\n=== Player Setup ===" + Style.RESET_ALL)
 
-    print_str = ''
     master_logger = MasterLogger.get_instance()
 
     # Setup player data if not already written
@@ -192,6 +193,7 @@ def collect_player_data(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> Tuple
         save_player_to_lobby_file(ps.ai_doppleganger.player_state)
 
     # Synchronize the player list once all players are ready
+    print_str = ''
     while len([p for p in gs.players if p.is_human]) < gs.number_of_human_players:
         sleep(1)
         # Load the players from the lobby once all players are set up
@@ -209,5 +211,19 @@ def collect_player_data(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> Tuple
     ps.ai_doppleganger.initialize_game_state(gs)
     gs.players = load_players_from_lobby(gs)
     gs.players = sorted(gs.players, key=lambda p: p.code_name)
+
+    # Cut the deck of icebreakers based on the lobby ID
+    icebreakers = gs.icebreakers  # assuming this is a list
+    first_breaker = [icebreakers[0]]
+    the_rest = icebreakers[1:]
+
+    # Use modulo to rotate based on lobby_id
+    start_idx = int(ps.lobby_id) % len(the_rest)
+    first_chunk = the_rest[start_idx:]
+    second_chunk = the_rest[:start_idx]
+
+    # Final reordered list
+    final_icebreakers = first_breaker + first_chunk + second_chunk
+    gs.icebreakers = final_icebreakers
 
     return ScreenEnum.CHAT, gs, ps

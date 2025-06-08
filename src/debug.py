@@ -8,7 +8,8 @@ from utils.chatbot.ai_v5 import AIPlayer
 from utils.file_io import (
     load_players_from_lobby, 
     save_player_to_lobby_file, 
-    synchronize_start_time
+    synchronize_start_time,
+    synchronize_start_time_debug
 )
 from utils.constants import COLOR_DICT
 
@@ -40,7 +41,7 @@ def create_lobby_dir(lobby_id: int) -> str:
     os.makedirs(lobby_path, exist_ok=True)
     return lobby_path
 
-def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, template_folder: str, player_number: int) -> tuple:
+def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, num_players: int, player_number: int, print_prompts:bool) -> tuple:
     """
     Initializes the debug setup for a single player using pre-defined template data.
 
@@ -53,7 +54,7 @@ def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, template_folder:
         ss (ScreenEnum): The current screen state (unused but included for consistency).
         gs (GameState): The shared game state object to be updated with player and lobby data.
         ps (PlayerState): The player's state object, to be populated with template data.
-        template_folder (str): The name of the debug template folder to load player data from.
+        num_players (int): The number of players in a game.
         player_number (int): The index of the player within the template file.
 
     Returns:
@@ -63,19 +64,25 @@ def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, template_folder:
     logger = MasterLogger.get_instance()
 
     # Load template data
-    with open(os.path.join(TEMPLATE_BASE, template_folder, "players.json")) as f:
+    # num_players is 0 indexed. so add 1
+    num_players_str = f"{num_players + 1}_player"
+    player_path = os.path.join(TEMPLATE_BASE, num_players_str, "players.json")
+    with open(player_path) as f:
         all_players = json.load(f)
+    
     player_data = all_players[player_number]
 
     # Timekeeper setup
-    is_timekeeper = player_number == 0
-    if is_timekeeper:
+    ps.timekeeper = player_number == 0
+
+    if ps.timekeeper:
         lobby_id = get_next_lobby_id()
         lobby_path = create_lobby_dir(lobby_id)
+
         # Optionally clear old contents
         for fname in os.listdir(lobby_path):
             os.remove(os.path.join(lobby_path, fname))
-        print(Fore.GREEN + f"[DEBUG] Timekeeper creating lobby_{lobby_id}" + Style.RESET_ALL)
+        # print(Fore.GREEN + f"[DEBUG] Timekeeper creating lobby_{lobby_id}" + Style.RESET_ALL)
     else:
         # Wait for timekeeper to create lobby
         while True:
@@ -96,7 +103,7 @@ def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, template_folder:
 
     # Create PlayerState
     ps = PlayerState(
-        lobby_id=0,
+        lobby_id=str(lobby_id),
         first_name=player_data["first_name"],
         last_initial=player_data["last_initial"],
         code_name=player_data["code_name"],
@@ -107,34 +114,55 @@ def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, template_folder:
         extra_info=player_data["extra_info"],
         is_human=True,
         color_name=player_data["color_name"],
+        timekeeper=ps.timekeeper
     )
     ps.logger = logger
     ps.written_to_file = True
-    
+    # print(gs.start_time_path)
+    # print(gs.players)
 
     # Save players
-    save_player_to_lobby_file(ps)
-    ps.ai_doppleganger = AIPlayer(player_to_steal=ps)
-    save_player_to_lobby_file(ps.ai_doppleganger.player_state)
+    save_player_to_lobby_file(ps, debug=True)
+    ps.ai_doppleganger = AIPlayer(player_to_steal=ps, debug_bool=print_prompts)
+    save_player_to_lobby_file(ps.ai_doppleganger.player_state, debug=True)
 
     # Timekeeper sets start time
-    if is_timekeeper:
-        synchronize_start_time(gs, ps)
-    else:
-        # Wait for timekeeper to write start time
-        while not os.path.exists(gs.start_time_path):
-            sleep(0.5)
+    synchronize_start_time_debug(gs, ps)
 
     # Load full player list
-    gs.players = load_players_from_lobby(gs)
-    gs.players = sorted(gs.players, key=lambda p: p.code_name)
+    gs.players = sorted(load_players_from_lobby(gs), key=lambda p: p.code_name)
     ps.ai_doppleganger.initialize_game_state(gs)
 
+    # Update icebreakers
+    # Cut the deck of icebreakers based on the lobby ID
+    icebreakers = gs.icebreakers  # assuming this is a list
+    first_breaker = [icebreakers[0]]
+    the_rest = icebreakers[1:]
+
+    # Use modulo to rotate based on lobby_id
+    start_idx = int(ps.lobby_id) % len(the_rest)
+    first_chunk = the_rest[start_idx:]
+    second_chunk = the_rest[:start_idx]
+
+    # Final reordered list
+    final_icebreakers = first_breaker + first_chunk + second_chunk
+    gs.icebreakers = final_icebreakers
+
+    # Synchronize the player list once all players are ready
+    print_str = ''
+    while len([p for p in gs.players if p.is_human]) < gs.number_of_human_players:
+        sleep(1)
+        # Load the players from the lobby once all players are set up
+        gs.players = load_players_from_lobby(gs)
+        human_players = [p for p in gs.players if p.is_human]
+        new_str = f"{len(human_players)}/{gs.number_of_human_players} players are ready."
+        if print_str != new_str:
+            print(new_str)
+            print_str = new_str
+
     print(Fore.GREEN + "All players are ready!" + Style.RESET_ALL)
-    print(COLOR_DICT[ps.color_name] + f"{ps.code_name} joined the lobby" + Style.RESET_ALL)
-    print(COLOR_DICT[ps.ai_doppleganger.player_state.color_name] + f"{ps.ai_doppleganger.player_state.code_name} joined the lobby" + Style.RESET_ALL)
     gs.players.append(ps)
-    gs.players.append(ps.ai_doppleganger.player_state)
+    # gs.players.append(ps.ai_doppleganger.player_state)
 
     input(Fore.MAGENTA + "Press Enter to continue to the chat phase..." + Style.RESET_ALL)
     return ScreenEnum.CHAT, gs, ps

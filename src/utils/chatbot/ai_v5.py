@@ -15,7 +15,8 @@ from utils.states import PlayerState, GameState
 from utils.file_io import SequentialAssigner
 from utils.constants import (
     NAMES_PATH, NAMES_INDEX_PATH, 
-    COLORS_PATH, COLORS_INDEX_PATH
+    COLORS_PATH, COLORS_INDEX_PATH,
+    FEEDBACK,
     )
 from utils.logging_utils import MasterLogger
 
@@ -82,17 +83,20 @@ class AIPlayer:
                     "persona": "HERE IS YOUR PERSONA",
                     "minutes": "HERE IS THE CONVERSATION SO FAR",
                 },
+                show_prompts = debug_bool,
                 temperature=0.01,
                 llm_model="gpt-4.1-nano",
             ),
             "respond": OpenAIPrompter(
                 prompt_path="./resources/prompts/v0/respond.yaml",
                 prompt_headers={
+                    "feedback": "HERE IS FEEDBACK FROM PREVIOUS GAMES",
                     "persona": "HERE IS YOUR PERSONA",
                     "minutes": "HERE IS THE CONVERSATION SO FAR",
                     "reasoning": "YOU HAVE DECIDED TO ANSWER FOR THE FOLLOWING REASONIG"
                     },
-                temperature=0.7,
+                show_prompts = debug_bool,
+                temperature=0.9,
                 llm_model="gpt-4.1-mini",
             ),
               "stylizer": OpenAIPrompter(
@@ -101,7 +105,8 @@ class AIPlayer:
                     "player_minutes": "HERE ARE MESSAGES THAT YOU WILL COPY THE STYLE FROM",
                     "message": "HERE IS THE MESSAGE YOU WILL STYLIZE",
                 },
-                temperature=0.01,
+                show_prompts = debug_bool,
+                temperature=0.5,
                 llm_model="gpt-4.1-mini",
             )
         }
@@ -178,6 +183,7 @@ class AIPlayer:
         """
         prompter = self.prompter_dict["respond"]
         input_texts = {
+            "feedback": FEEDBACK,
             "persona": self.persona, 
             "minutes": "\n".join(minutes),
             "reasoning": dtr_resp["reasoning"]
@@ -268,6 +274,9 @@ class AIPlayer:
                 styled_response = asyncio.run(
                     self.stylize_response(response)
                     )
+                
+                # wait for a random amount of time
+
                 return styled_response
             else:
                 return "ERROR"
@@ -313,8 +322,13 @@ class AIPlayer:
             f"Your name is {player_state.first_name} {player_state.last_initial}. "
             f"You are a {player_state.grade} grader who loves {player_state.favorite_food}, "
             f"{player_state.favorite_animal}, and enjoys {player_state.hobby}. "
-            f"One more thing about you: {player_state.extra_info}."
-            f"Of course, there is so much more to you than just these things."
+            f"One more thing about you: {player_state.extra_info}. "
+            f"Of course, there is so much more to you than just these things. "
+            f"Your code name is {player_state.code_name} and your color is {player_state.color_name}. "
+            f"You are an Human player in a social deduction game, "
+            f"and you are trying to win the game by convincing others of your innocence, " 
+            f"while also trying to deduce who the AI players are. "
+            
         )
    
     def initialize_game_state(self, game_state: GameState):

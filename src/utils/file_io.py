@@ -155,6 +155,33 @@ def synchronize_start_time(gs: GameState, ps: PlayerState) -> None:
         ps.starttime = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
         print(f"Start time for round {current_round} already exists: {start_time_str}")
 
+def synchronize_start_time_debug(gs: GameState, ps: PlayerState) -> None:
+    """
+    Synchronizes the round start time in debug mode.
+
+    This version assumes the timekeeper is already known and skips timekeeper assignment.
+    Only the timekeeper writes the time file. Other players wait for the timestamp to appear.
+
+    Args:
+        gs (GameState): The shared game state with file paths and round info.
+        ps (PlayerState): The current player's state with timekeeper flag.
+    """
+    current_round = str(gs.round_number)
+    if ps.timekeeper:
+        # Timekeeper sets the start time
+        # print(f"[DEBUG] Timekeeper setting start time for round {current_round}")
+        start_times = {}  # we assume this is a fresh start
+        start_time_str = set_round_start_time(current_round, start_times, gs.start_time_path)
+        ps.starttime = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
+
+    else:
+        # Other players wait for the start time to appear
+        # print(f"[DEBUG] Waiting for timekeeper to set start time for round {current_round}...")
+        start_time_str = wait_for_start_time(current_round, gs.start_time_path)
+        ps.starttime = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
+        # print(f"[DEBUG] Start time loaded: {start_time_str}")
+
+
 def init_game_file(path: str):
     """
     Creates a file at the specified path if it does not already exist.
@@ -318,7 +345,7 @@ class SequentialAssigner:
         return selected_item
 
 
-def save_player_to_lobby_file(ps: PlayerState) -> None:
+def save_player_to_lobby_file(ps: PlayerState, debug: bool=False) -> None:
     """
     Saves the player's data to the lobby's `players.json` file.
 
@@ -327,8 +354,12 @@ def save_player_to_lobby_file(ps: PlayerState) -> None:
 
     Args:
         ps (PlayerState): The player to save to the lobby file.
+        debug (string): determines if to save in runtime or debug lobby
     """
-    lobby_path = f"./data/runtime/lobbies/lobby_{ps.lobby_id}"
+    if debug:
+        lobby_path = f"./data/debug/lobbies/lobby_{ps.lobby_id}"
+    else:
+        lobby_path = f"./data/runtime/lobbies/lobby_{ps.lobby_id}"
     os.makedirs(lobby_path, exist_ok=True)
     file_path = os.path.join(lobby_path, "players.json")
 

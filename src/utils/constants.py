@@ -2,7 +2,7 @@ from colorama import Fore, init
 
 from utils.states import GameState, PlayerState
 
-ROUND_DURATION = 60  # seconds
+ROUND_DURATION = 3  # seconds
 
 COLOR_DICT = {
     "RED": Fore.RED,
@@ -53,3 +53,6 @@ ICEBREAKERS = [
     "What is one of your favorite hobby or pastime?",
     "If you could meet any fictional character, who would it be and why?",
 ]
+
+with open("./resources/prompts/feedback.txt", "r") as f:
+    FEEDBACK = f.read()
