@@ -270,8 +270,8 @@ def voting_round(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[Screen
     # print(format_gm_message('Waiting for players to be ready to vote...'))
     # Collect the current player's vote if still in the game
     if ps.still_in_game:
-        # who_player_voted_for = collect_vote(gs, ps)
-        pass
+        who_player_voted_for = collect_vote(gs, ps)
+        # pass
     else:
         print(
             Fore.YELLOW +
@@ -289,7 +289,7 @@ def voting_round(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[Screen
         current_round_vote_lst = vote_dict.get(f'votes_r{gs.round_number}', {})
 
         # Count the total number of votes cast
-        print(current_round_vote_lst)
+        # print(current_round_vote_lst)
         # input(f"Press Enter to continue to next phase... {ps.code_name} has voted for {who_player_voted_for}")
         num_votes = len(current_round_vote_lst)
 

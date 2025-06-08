@@ -96,8 +96,9 @@ class Prompter(ABC):
                 - A dict of prompt headers
                 - A bool indicating structured output mode
         """
-        with open(self.prompt_path, "r") as f:
+        with open(self.prompt_path, encoding="utf-8") as f:
             raw = yaml.safe_load(f)
+
 
         meta = raw.get("__meta__", {})
         model_path = meta.get("output_model")

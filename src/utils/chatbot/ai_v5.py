@@ -8,9 +8,8 @@ from typing import Dict, List, Tuple
 from pydantic import BaseModel
 from utils.prompting.prompter import OpenAIPrompter
 import sys
-
-from utils.prompting import prompter
 sys.path.append("../../")
+from utils.prompting import prompter
 from utils.states import PlayerState, GameState
 from utils.file_io import SequentialAssigner
 from utils.constants import (
@@ -84,8 +83,8 @@ class AIPlayer:
                     "minutes": "HERE IS THE CONVERSATION SO FAR",
                 },
                 show_prompts = debug_bool,
-                temperature=0.01,
-                llm_model="gpt-4.1-nano",
+                temperature=0.5,
+                llm_model="gpt-4.1-mini",
             ),
             "respond": OpenAIPrompter(
                 prompt_path="./resources/prompts/v0/respond.yaml",
