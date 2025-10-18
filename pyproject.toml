@@ -4,8 +4,14 @@ target-version = ["py311"]
 
 [tool.ruff]
 line-length = 100
-extend-select = ["I"]  # import sorting
-exclude = ["old_*", "bin/*", "data/*"]
+exclude = ["venv", ".venv", "build", "dist", "data", "old_*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+extend-ignore = ["E501"]  # Black handles long lines
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "doppelbot"]
 
 [tool.mypy]
 python_version = "3.11"

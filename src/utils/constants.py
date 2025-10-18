@@ -1,4 +1,4 @@
-from colorama import Fore, init
+from colorama import Fore
 
 from utils.states import GameState, PlayerState
 
@@ -13,10 +13,10 @@ COLOR_DICT = {
     "CYAN": Fore.CYAN,
 }
 
-NAMES_PATH="./data/runtime/possible_code_names.json"
-NAMES_INDEX_PATH="./data/runtime/code_names_index.txt"
-COLORS_PATH="./data/runtime/possible_colors.json"
-COLORS_INDEX_PATH="./data/runtime/colors_index.txt"
+NAMES_PATH = "./data/runtime/possible_code_names.json"
+NAMES_INDEX_PATH = "./data/runtime/code_names_index.txt"
+COLORS_PATH = "./data/runtime/possible_colors.json"
+COLORS_INDEX_PATH = "./data/runtime/colors_index.txt"
 
 BLANK_PS = PlayerState(
     lobby_id="",
@@ -28,7 +28,7 @@ BLANK_PS = PlayerState(
     favorite_animal="",
     hobby="",
     extra_info="",
-    is_human=True,  
+    is_human=True,
     color_name="",
     # color_asci=""
 )

@@ -1,27 +1,38 @@
-'''
+"""
 2025-03-09
 Author: Dan Schumacher
 How to run:
    python ./src/utils/prompter.py
-'''
-import os
+"""
+
 import json
-from dotenv import load_dotenv
-from typing import List, Union, Dict
-from pydantic import BaseModel
+import os
 from abc import ABC, abstractmethod
+from typing import Dict, List, Union
+
 import openai
+from dotenv import load_dotenv
+from pydantic import BaseModel
+
 
 class QAs(BaseModel):
     question: Dict[str, str]  # Multiple inputs as a dictionary
     answer: str | BaseModel  # Allow both strings and BaseModel
 
+
 # === Base Prompter Class ===
 class Prompter(ABC):
     def __init__(
-            self, openai_dict_key: str, system_prompt: str, examples: List[QAs], 
-            prompt_headers: Dict[str, str], output_format: BaseModel, 
-            main_prompt_header:str, llm_model: str = "gpt-4o-mini", temperature: float = 0.1):
+        self,
+        openai_dict_key: str,
+        system_prompt: str,
+        examples: List[QAs],
+        prompt_headers: Dict[str, str],
+        output_format: BaseModel,
+        main_prompt_header: str,
+        llm_model: str = "gpt-4o-mini",
+        temperature: float = 0.1,
+    ):
         """
         :param openai_dict_key: API key variable name in .env
         :param system_prompt: System message for the LLM
@@ -39,7 +50,9 @@ class Prompter(ABC):
         self.temperature = temperature
         self.client = self._load_env()
         if not isinstance(self.prompt_headers, dict):
-            raise TypeError(f"Expected `prompt_headers` to be a dictionary, but got {type(self.prompt_headers)} instead: {prompt_headers}")
+            raise TypeError(
+                f"Expected `prompt_headers` to be a dictionary, but got {type(self.prompt_headers)} instead: {prompt_headers}"
+            )
 
         self.format_examples()  # Format examples after setting them
 
@@ -57,7 +70,8 @@ class Prompter(ABC):
     def format_q_as_string(self, question_dict: Dict[str, str]) -> str:
         """Formats multiple question fields for the LLM"""
         formatted_questions = "\n\n".join(
-            f"{self.prompt_headers.get(key, key).upper()}: {value}" for key, value in question_dict.items()
+            f"{self.prompt_headers.get(key, key).upper()}: {value}"
+            for key, value in question_dict.items()
         )
         return (
             f"{formatted_questions}\n"
@@ -70,12 +84,13 @@ class Prompter(ABC):
         """Formats few-shot examples by prepending prompt headers"""
         for qa in self.examples:
             qa.question = {
-                key: self.format_q_as_string({key: value}) if isinstance(value, str) else value  #  Preserve dict structure
+                key: (
+                    self.format_q_as_string({key: value}) if isinstance(value, str) else value
+                )  #  Preserve dict structure
                 for key, value in qa.question.items()
             }
             if isinstance(qa.answer, BaseModel):
                 qa.answer = qa.answer.model_dump_json()
-
 
     @abstractmethod
     def parse_output(self, llm_output: str):
@@ -86,6 +101,7 @@ class Prompter(ABC):
     def get_completion(self, user_inputs: Dict[str, str]) -> str:
         """Send the prompt to the LLM and get a response"""
         pass
+
 
 # === OpenAI Implementation ===
 class OpenAIPrompter(Prompter):
@@ -100,13 +116,15 @@ class OpenAIPrompter(Prompter):
     def _build_messages(self, input_texts: Dict[str, str]):
         """Builds the messages list for the OpenAI API with a single structured user message."""
         messages = [{"role": "system", "content": self.system_prompt}]
-        
+
         # Add example QAs (Few-shot learning)
         for qa in self.examples:
             example_lines = []
             for key, value in qa.question.items():
                 if isinstance(value, dict):  #  Ensure only dictionaries are unpacked
-                    formatted_value = "\n".join(f"{sub_key}: {sub_value}" for sub_key, sub_value in value.items())
+                    formatted_value = "\n".join(
+                        f"{sub_key}: {sub_value}" for sub_key, sub_value in value.items()
+                    )
                 elif isinstance(value, str):  #  Keep JSON strings as-is
                     formatted_value = value
                 else:
@@ -115,14 +133,18 @@ class OpenAIPrompter(Prompter):
                 example_lines.append(f"{self.prompt_headers.get(key, key)}: {formatted_value}")
 
             example_text = "\n".join(example_lines)
-            messages.append({"role": "user", "content": f"{self.main_prompt_header}\n{example_text}"})
+            messages.append(
+                {"role": "user", "content": f"{self.main_prompt_header}\n{example_text}"}
+            )
             messages.append({"role": "assistant", "content": qa.answer})
 
         # Format user input into a single message
         user_input_lines = []
         for key, value in input_texts.items():
             if isinstance(value, dict):
-                formatted_value = "\n".join(f"{sub_key}: {sub_value}" for sub_key, sub_value in value.items())
+                formatted_value = "\n".join(
+                    f"{sub_key}: {sub_value}" for sub_key, sub_value in value.items()
+                )
             elif isinstance(value, str):
                 formatted_value = value
             else:
@@ -131,10 +153,11 @@ class OpenAIPrompter(Prompter):
             user_input_lines.append(f"{self.prompt_headers.get(key, key)}: {formatted_value}")
 
         user_input_text = "\n".join(user_input_lines)
-        messages.append({"role": "user", "content": f"{self.main_prompt_header}\n{user_input_text}"})
+        messages.append(
+            {"role": "user", "content": f"{self.main_prompt_header}\n{user_input_text}"}
+        )
 
         return messages
-
 
     def validate_and_format_message(self, message: str) -> str:
         """Validates and formats messages to be short and simple."""
@@ -142,47 +165,48 @@ class OpenAIPrompter(Prompter):
         words = message.split()
         if len(words) > 8:
             words = words[:8]
-        
+
         # Remove most punctuation except question marks
         cleaned_words = []
         for word in words:
-            word = "".join(c for c in word if c.isalnum() or c == '?')
+            word = "".join(c for c in word if c.isalnum() or c == "?")
             cleaned_words.append(word)
-        
+
         # Convert to lowercase
         message = " ".join(cleaned_words).lower()
-        
+
         # Remove slang words
-        slang_words = {'yo', 'bruh', 'lit', 'fam', 'yeet', 'sus'}
+        slang_words = {"yo", "bruh", "lit", "fam", "yeet", "sus"}
         clean_words = [w for w in message.split() if w.lower() not in slang_words]
-        
+
         return " ".join(clean_words)
 
     def get_completion(
-            self, input_texts: Dict[str, str], parse=True, verbose=False) -> Union[dict, None]:
+        self, input_texts: Dict[str, str], parse=True, verbose=False
+    ) -> Union[dict, None]:
         """Calls OpenAI API with multiple formatted inputs"""
         input_text_str = self._build_messages(input_texts)
         response = self.client.chat.completions.create(
             model=self.llm_model,
             messages=input_text_str,
             temperature=self.temperature,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
         )
 
         final_resp = self.parse_output(response) if parse else response
 
         # Validate and format the message if it's in the expected format
-        if isinstance(final_resp, dict) and 'output_text' in final_resp:
-            final_resp['output_text'] = self.validate_and_format_message(final_resp['output_text'])
+        if isinstance(final_resp, dict) and "output_text" in final_resp:
+            final_resp["output_text"] = self.validate_and_format_message(final_resp["output_text"])
 
         if verbose:
-            print("\n" + "="*60)
+            print("\n" + "=" * 60)
             print("OUTPUT FROM LLM:")
             print(json.dumps(final_resp, indent=4))
-            print("="*60 + "\n")
+            print("=" * 60 + "\n")
 
         return final_resp
-    
+
     # def get_completion(
     #         self, input_texts: Dict[str, str], parse=True, verbose=False) -> Union[dict, None]:
     #     """Calls OpenAI API with multiple formatted inputs"""
@@ -203,7 +227,7 @@ class OpenAIPrompter(Prompter):
     #         print("="*60 + "\n")
 
     #     return final_resp
-    
+
     def fetch_prompt(self, input_texts: Dict[str, str]) -> str:
         """Fetch the prompt without sending it to the LLM."""
         input_text_str = self._build_messages(input_texts)

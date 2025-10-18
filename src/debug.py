@@ -1,20 +1,21 @@
-import json, os, shutil
+import json
+import os
 from time import sleep
-from datetime import datetime
+
 from colorama import Fore, Style
-from utils.states import GameState, PlayerState, ScreenEnum
-from utils.logging_utils import MasterLogger
+
 from utils.chatbot.ai_v5 import AIPlayer
 from utils.file_io import (
-    load_players_from_lobby, 
-    save_player_to_lobby_file, 
-    synchronize_start_time,
-    synchronize_start_time_debug
+    load_players_from_lobby,
+    save_player_to_lobby_file,
+    synchronize_start_time_debug,
 )
-from utils.constants import COLOR_DICT
+from utils.logging_utils import MasterLogger
+from utils.states import GameState, PlayerState, ScreenEnum
 
 TEMPLATE_BASE = "./data/debug/templates"
 DEBUG_LOBBY_BASE = "./data/debug/lobbies"
+
 
 def get_next_lobby_id() -> int:
     """
@@ -24,8 +25,11 @@ def get_next_lobby_id() -> int:
         int: The next sequential lobby ID based on existing 'lobby_x' folders.
     """
 
-    existing = [int(d.split("_")[-1]) for d in os.listdir(DEBUG_LOBBY_BASE) if d.startswith("lobby_")]
+    existing = [
+        int(d.split("_")[-1]) for d in os.listdir(DEBUG_LOBBY_BASE) if d.startswith("lobby_")
+    ]
     return max(existing, default=-1) + 1
+
 
 def create_lobby_dir(lobby_id: int) -> str:
     """
@@ -41,7 +45,15 @@ def create_lobby_dir(lobby_id: int) -> str:
     os.makedirs(lobby_path, exist_ok=True)
     return lobby_path
 
-def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, num_players: int, player_number: int, print_prompts:bool) -> tuple:
+
+def debug_setup(
+    ss: ScreenEnum,
+    gs: GameState,
+    ps: PlayerState,
+    num_players: int,
+    player_number: int,
+    print_prompts: bool,
+) -> tuple:
     """
     Initializes the debug setup for a single player using pre-defined template data.
 
@@ -69,7 +81,7 @@ def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, num_players: int
     player_path = os.path.join(TEMPLATE_BASE, num_players_str, "players.json")
     with open(player_path) as f:
         all_players = json.load(f)
-    
+
     player_data = all_players[player_number]
 
     # Timekeeper setup
@@ -86,7 +98,13 @@ def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, num_players: int
     else:
         # Wait for timekeeper to create lobby
         while True:
-            lobby_ids = sorted([int(d.split("_")[-1]) for d in os.listdir(DEBUG_LOBBY_BASE) if d.startswith("lobby_")])
+            lobby_ids = sorted(
+                [
+                    int(d.split("_")[-1])
+                    for d in os.listdir(DEBUG_LOBBY_BASE)
+                    if d.startswith("lobby_")
+                ]
+            )
             if lobby_ids:
                 lobby_id = max(lobby_ids)
                 lobby_path = os.path.join(DEBUG_LOBBY_BASE, f"lobby_{lobby_id}")
@@ -114,7 +132,7 @@ def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, num_players: int
         extra_info=player_data["extra_info"],
         is_human=True,
         color_name=player_data["color_name"],
-        timekeeper=ps.timekeeper
+        timekeeper=ps.timekeeper,
     )
     ps.logger = logger
     ps.written_to_file = True
@@ -149,7 +167,7 @@ def debug_setup(ss: ScreenEnum, gs: GameState, ps: PlayerState, num_players: int
     gs.icebreakers = final_icebreakers
 
     # Synchronize the player list once all players are ready
-    print_str = ''
+    print_str = ""
     while len([p for p in gs.players if p.is_human]) < gs.number_of_human_players:
         sleep(1)
         # Load the players from the lobby once all players are set up
