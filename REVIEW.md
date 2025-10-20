@@ -26,11 +26,16 @@ src/utils/states.py
 
 - Inside PlayerState.to_dict() several fields are not included (is_human, voted, stil_in_game, timekeeper, written_to_file, color_name, ai_doppleganger). Reccommend inclusion or comment why they were not included.
 
+- to_dict has a reference to self.start_time I do not believe this a a dataclass field.
+
 **P1 (soon)**  
 - …
 
 **P2 (nice to have)**  
-- …
+
+src\voting.py
+- Moved moodule level import to top of file 
+    ``` from collections import Counter ```
 
 ## Suggested next steps (1–2 weeks)
 - …
