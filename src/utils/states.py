@@ -30,7 +30,7 @@ class PlayerState:
     color_name: str
     starttime: str = ""  # Start time of the game
     voted: bool = False  # Flag to indicate if the player has voted
-    ai_doppleganger: Optional[AIPlayer] = None  # type: ignore
+    ai_doppleganger: Optional[PlayerState] = None  
     written_to_file: bool = False  # Flag to indicate if the player has been written to a file
     timekeeper: bool = False  # Flag to indicate if the player is a timekeeper
     still_in_game: bool = True  # Flag to indicate if the player is still in the game
