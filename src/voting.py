@@ -9,6 +9,8 @@ import json
 import os
 from time import sleep
 
+from collections import Counter
+
 from colorama import Fore, Style
 
 from utils.asthetics import clear_screen, dramatic_print, format_gm_message
@@ -117,10 +119,6 @@ def collect_vote(gs: GameState, ps: PlayerState) -> str:
 
         except (ValueError, IndexError):
             print("Invalid choice. Please enter a number from the list.")
-
-
-# Count votes and determine the outcome
-from collections import Counter
 
 
 def count_votes(vote_records: dict, gs: GameState) -> tuple[int, list]:
