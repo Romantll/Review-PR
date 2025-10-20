@@ -1,13 +1,16 @@
 import os
 import random
 import time
+
 from colorama import Fore, Style
+
 
 def clear_screen():
     """
     Clears the console screen based on the operating system.
     """
-    os.system('cls' if os.name == 'nt' else 'clear')
+    os.system("cls" if os.name == "nt" else "clear")
+
 
 def dramatic_print(message: str):
     """
@@ -28,7 +31,7 @@ def dramatic_print(message: str):
         "The votes have been tallied...",
         "Tension fills the room...",
         "Everyone holds their breath...",
-        "A hush falls over the crowd..."
+        "A hush falls over the crowd...",
     ]
 
     # Print a random suspense phrase with some dramatic effect
@@ -37,7 +40,7 @@ def dramatic_print(message: str):
 
     # Dramatic pause with dots
     for _ in range(3):
-        print(Fore.YELLOW + "..." + Style.RESET_ALL, end='', flush=True)
+        print(Fore.YELLOW + "..." + Style.RESET_ALL, end="", flush=True)
         time.sleep(0.7)
 
     print("\n")
@@ -52,8 +55,8 @@ def dramatic_print(message: str):
     time.sleep(1)
     print(Fore.GREEN + f"\n{message}\n" + Style.RESET_ALL)
 
-    
-def format_gm_message(msg: str) -> str:    
+
+def format_gm_message(msg: str) -> str:
     """
     Formats a message as a stylized GAME MASTER announcement.
 
@@ -67,7 +70,6 @@ def format_gm_message(msg: str) -> str:
     """
 
     top = Fore.YELLOW + "*" * 50 + Fore.RESET
-    mid = Fore.YELLOW + f"GAME MASTER: {msg}"+ Fore.RESET
-    bot = Fore.YELLOW +"*" * 50+ Fore.RESET
+    mid = Fore.YELLOW + f"GAME MASTER: {msg}" + Fore.RESET
+    bot = Fore.YELLOW + "*" * 50 + Fore.RESET
     return f"\n\n{top}\n{mid}\n{bot}\n"
-

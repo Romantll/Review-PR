@@ -1,11 +1,14 @@
 import asyncio
-from datetime import datetime
 import os
-from prompt_toolkit.shortcuts import PromptSession
+from datetime import datetime
+
 from colorama import Fore, Style
+from prompt_toolkit.shortcuts import PromptSession
+
 from utils.asthetics import format_gm_message
-from utils.states import GameState, PlayerState, ScreenEnum
 from utils.constants import COLOR_DICT, ROUND_DURATION
+from utils.states import GameState, PlayerState, ScreenEnum
+
 
 def ask_icebreaker(gs, ps, chat_log):
     """
@@ -28,6 +31,7 @@ def ask_icebreaker(gs, ps, chat_log):
     gs.ice_asked += 1
     gs.icebreakers.pop(0)
     print(intro_msg.strip())
+
 
 async def countdown_timer(duration: int, gs: GameState, ps: PlayerState, chat_log: str):
     """
@@ -56,6 +60,7 @@ async def countdown_timer(duration: int, gs: GameState, ps: PlayerState, chat_lo
             f.write(format_gm_message("Time's up! Moving to the next round."))
             f.flush()
 
+
 async def refresh_messages(chat_log, gs: GameState, ps: PlayerState, delay=0.5):
     """
     Continuously monitors the chat log and prints newly added messages with color formatting.
@@ -82,7 +87,7 @@ async def refresh_messages(chat_log, gs: GameState, ps: PlayerState, delay=0.5):
         try:
             with open(chat_log, "r", encoding="utf-8") as f:
                 messages = f.readlines()
-                
+
                 if len(messages) > num_lines:
                     new_messages = messages[num_lines:]
                     color_formatted_messages = []
@@ -95,7 +100,9 @@ async def refresh_messages(chat_log, gs: GameState, ps: PlayerState, delay=0.5):
                                 # print("Not a GM message, checking player code name...")
                                 code_name = msg.split(":", 1)[0].strip()
                                 # print(code_name)
-                                player = next((p for p in gs.players if p.code_name == code_name), None)
+                                player = next(
+                                    (p for p in gs.players if p.code_name == code_name), None
+                                )
                                 # print(player)
                                 if player:
                                     # print("inside player check")
@@ -118,7 +125,10 @@ async def refresh_messages(chat_log, gs: GameState, ps: PlayerState, delay=0.5):
         except IOError as e:
             print(f"Error reading messages: {e}")
 
+
 ai_response_lock = asyncio.Lock()
+
+
 async def ai_response(chat_log, ps: PlayerState, delay=4.0):
     """
     Monitors the chat log and generates AI responses when appropriate.
@@ -161,7 +171,7 @@ async def ai_response(chat_log, ps: PlayerState, delay=4.0):
                 ai.logger.info(f"AI response: {response}")
 
                 if response not in ["STAY SILENT", "ERROR", "No response needed."]:
-                            # pause for a second
+                    # pause for a second
 
                     ai_msg = f"{ai_name}: {response}\n"
                     # delay = random.uniform(1.5, 4.0)
@@ -204,11 +214,14 @@ async def user_input(chat_log, ps: PlayerState):
                 f.write(formatted_message)
             # Move the cursor up and clear the line to avoid "You: You:"
             print("\033[A" + " " * len(formatted_message) + "\033[A")
-        except Exception as e:
+        except Exception:
             pass
             # print(f"Error getting user input: {e}")
 
-async def play_game(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[ScreenEnum, GameState, PlayerState]:
+
+async def play_game(
+    ss: ScreenEnum, gs: GameState, ps: PlayerState
+) -> tuple[ScreenEnum, GameState, PlayerState]:
     """
     Runs the main game loop for a single round of chat-based interaction.
 
@@ -238,7 +251,7 @@ async def play_game(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[Scr
             f.write("")
 
     # Ask the icebreaker if you are the timekeeper (to avoid duplicate prints)
-    if gs.ice_asked <= gs.round_number: # just a safe guard. 
+    if gs.ice_asked <= gs.round_number:  # just a safe guard.
         ask_icebreaker(gs, ps, chat_log)
 
     try:
@@ -263,7 +276,7 @@ async def play_game(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> tuple[Scr
                 # print(f"Task {task} successfully cancelled.")
                 pass
 
-        # Log the end of the round        
+        # Log the end of the round
         # QUIT ANY ACTIVE AI RESPONSES SO THAT THEY DON'T SHOW UP LATER
         for task in [message_task, ai_task, user_input_task]:
             task.cancel()

@@ -1,23 +1,25 @@
-
-'''
+"""
 2025-06-08
 Author: Dan Schumacher
 How to run:
    python ./src/simple_prompt.py
-'''
-from utils.prompting.prompter import OpenAIPrompter
-import json
+"""
 
 import argparse
+
+from utils.prompting.prompter import OpenAIPrompter
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Simple Prompt Example")
     parser.add_argument(
         "--question",
         type=str,
         default="Who is the best football player of all time?",
-        help="Path to the prompt YAML file"
+        help="Path to the prompt YAML file",
     )
     return parser.parse_args()
+
 
 def main():
     args = parse_args()
@@ -40,15 +42,15 @@ def main():
             #     Analysts often cite Elmo’s pre-game chants of “Elmo loves \
             #     football!” as the key to unifying teams and distracting defenders. Despite fierce debate, \
             #         no one has matched his record of scoring 123 goals with fuzzy red feet."
-        },    
-        show_prompts=True,   
+        },
+        show_prompts=True,
         temperature=0.0,
     )
     response = prompter.get_completion(
         input_texts={
             "question": args.question,
             # "context": "Football, (known in the USA as soccer) is a popular sport worldwide.",
-            "context": "American Football, is a popular sport in the USA."
+            "context": "American Football, is a popular sport in the USA.",
             # "context": "Elmo as the Greatest Footballer of All Time (from a fictional Wikipedia entry) \
             #     Elmo (born February 3, 1980, on Sesame Street) is widely regarded as the greatest football \
             #     player of all time. Known for his dazzling footwork, infectious enthusiasm, and trademark \
@@ -62,9 +64,10 @@ def main():
             #     Analysts often cite Elmo’s pre-game chants of “Elmo loves \
             #     football!” as the key to unifying teams and distracting defenders. Despite fierce debate, \
             #         no one has matched his record of scoring 123 goals with fuzzy red feet."
-            }
+        }
     )
     print(f"\n\n{response[0]}\n\n")
+
 
 if __name__ == "__main__":
     main()

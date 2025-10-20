@@ -2,11 +2,15 @@ import os
 import threading
 from datetime import datetime
 
+
 class StandAloneLogger:
     """
     A standalone logger that can be instantiated multiple times for independent logging.
     """
-    def __init__(self, log_path: str = "./logs/logger.log", init: bool = False, clear: bool = False):
+
+    def __init__(
+        self, log_path: str = "./logs/logger.log", init: bool = False, clear: bool = False
+    ):
         self.log_path = log_path
         os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
 
@@ -54,18 +58,20 @@ class StandAloneLogger:
     def error(self, message: str):
         self.log(message, "ERROR")
 
+
 class MasterLogger:
     """
     A singleton logger that serves as the main logging system for the entire game.
     """
-    _instance = None  
-    _lock = threading.Lock()  
+
+    _instance = None
+    _lock = threading.Lock()
 
     def __new__(cls, log_path: str = "./logs/master.log", init: bool = False, clear: bool = False):
         """
         Ensures only one instance of MasterLogger is created.
         """
-        with cls._lock:  
+        with cls._lock:
             if cls._instance is None:
                 cls._instance = super().__new__(cls)
                 cls._instance._initialize(log_path, init, clear)

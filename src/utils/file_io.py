@@ -1,10 +1,12 @@
-from dataclasses import asdict
-from datetime import datetime
 import json
 import os
-from typing import List, Tuple
+from dataclasses import asdict
+from datetime import datetime
 from time import sleep
+from typing import List, Tuple
+
 from utils.states import GameState, PlayerState
+
 
 def init_start_time_file(start_time_path: str) -> None:
     """
@@ -20,6 +22,7 @@ def init_start_time_file(start_time_path: str) -> None:
         with open(start_time_path, "w") as f:
             json.dump({}, f)
         print(f"Initialized start time file at {start_time_path}.")
+
 
 def load_start_times(start_time_path: str) -> dict:
     """
@@ -39,8 +42,9 @@ def load_start_times(start_time_path: str) -> dict:
         with open(start_time_path, "r") as f:
             return json.load(f)
     except (json.JSONDecodeError, FileNotFoundError):
-        print(f"Corrupted or missing start time file, reinitializing...")
+        print("Corrupted or missing start time file, reinitializing...")
         return {}
+
 
 def save_start_times(start_time_path: str, start_times: dict) -> None:
     """
@@ -56,6 +60,7 @@ def save_start_times(start_time_path: str, start_times: dict) -> None:
     with open(start_time_path, "w") as f:
         json.dump(start_times, f, indent=4)
 
+
 def assign_timekeeper(ps: PlayerState) -> None:
     """
     Marks the current player as the designated timekeeper.
@@ -67,6 +72,7 @@ def assign_timekeeper(ps: PlayerState) -> None:
     """
     ps.timekeeper = True
     print(f"{ps.code_name} has been assigned as the timekeeper.")
+
 
 def set_round_start_time(current_round: str, start_times: dict, start_time_path: str) -> str:
     """
@@ -86,6 +92,7 @@ def set_round_start_time(current_round: str, start_times: dict, start_time_path:
     save_start_times(start_time_path, start_times)
     print(f"Set start time for round {current_round}: {start_time}")
     return start_time
+
 
 def wait_for_start_time(current_round: str, start_time_path: str) -> str:
     """
@@ -108,6 +115,7 @@ def wait_for_start_time(current_round: str, start_time_path: str) -> str:
             return start_time
         print(f"Waiting for round {current_round} start time to be set...")
         sleep(1)
+
 
 def synchronize_start_time(gs: GameState, ps: PlayerState) -> None:
     """
@@ -155,6 +163,7 @@ def synchronize_start_time(gs: GameState, ps: PlayerState) -> None:
         ps.starttime = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
         print(f"Start time for round {current_round} already exists: {start_time_str}")
 
+
 def synchronize_start_time_debug(gs: GameState, ps: PlayerState) -> None:
     """
     Synchronizes the round start time in debug mode.
@@ -197,11 +206,13 @@ def init_game_file(path: str):
         with open(path, "w", encoding="utf-8") as f:
             f.write("")  # Start fresh
 
+
 # def append_message(path: str, message: str) -> None:
 #     with open(path, "a", encoding="utf-8") as f:
 #         f.write(message + "\n")
 #         f.flush()
 #         os.fsync(f.fileno())
+
 
 def read_new_messages(path: str, last_line: int) -> Tuple[List[str], List[str], int]:
     """
@@ -225,6 +236,7 @@ def read_new_messages(path: str, last_line: int) -> Tuple[List[str], List[str], 
     new_message_count = len(new_messages_list)
     last_line += new_message_count
     return full_chat_list, new_messages_list, last_line
+
 
 class SequentialAssigner:
     """
@@ -345,7 +357,7 @@ class SequentialAssigner:
         return selected_item
 
 
-def save_player_to_lobby_file(ps: PlayerState, debug: bool=False) -> None:
+def save_player_to_lobby_file(ps: PlayerState, debug: bool = False) -> None:
     """
     Saves the player's data to the lobby's `players.json` file.
 
@@ -381,7 +393,8 @@ def save_player_to_lobby_file(ps: PlayerState, debug: bool=False) -> None:
     with open(file_path, "w") as f:
         json.dump(players, f, indent=2)
 
-def load_players_from_lobby(gs:GameState) -> list[PlayerState]:
+
+def load_players_from_lobby(gs: GameState) -> list[PlayerState]:
     """
     Loads all players from the specified lobby's `players.json` file.
 

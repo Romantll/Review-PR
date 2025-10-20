@@ -1,25 +1,22 @@
 import asyncio
-from datetime import time
-import random
 import re
-from dataclasses import asdict
-import json
-from typing import Dict, List, Tuple 
-from pydantic import BaseModel
-from utils.prompting.prompter import OpenAIPrompter
 import sys
-sys.path.append("../../")
-from utils.prompting import prompter
-from utils.states import PlayerState, GameState
-from utils.file_io import SequentialAssigner
-from utils.constants import (
-    NAMES_PATH, NAMES_INDEX_PATH, 
-    COLORS_PATH, COLORS_INDEX_PATH,
-    FEEDBACK,
-    )
-from utils.logging_utils import MasterLogger
+from typing import Dict, List
 
-import re
+from utils.prompting.prompter import OpenAIPrompter
+
+sys.path.append("../../")
+from utils.constants import (
+    COLORS_INDEX_PATH,
+    COLORS_PATH,
+    FEEDBACK,
+    NAMES_INDEX_PATH,
+    NAMES_PATH,
+)
+from utils.file_io import SequentialAssigner
+from utils.logging_utils import MasterLogger
+from utils.states import GameState, PlayerState
+
 
 def extract_between_delimiters(text: str, delim: str) -> str:
     """
@@ -32,9 +29,14 @@ def extract_between_delimiters(text: str, delim: str) -> str:
     Returns:
         The text between the delimiters, or an error message if no match is found.
     """
-    pattern = re.escape(delim) + r'(.*?)' + re.escape(delim)
+    pattern = re.escape(delim) + r"(.*?)" + re.escape(delim)
     match = re.search(pattern, text, re.DOTALL)  # DOTALL handles multi-line blocks if needed
-    return match.group(1).strip() if match else f"ERROR NO MATCH FOUND ||| DELIM = {delim} ||| TEXT = {text}"
+    return (
+        match.group(1).strip()
+        if match
+        else f"ERROR NO MATCH FOUND ||| DELIM = {delim} ||| TEXT = {text}"
+    )
+
 
 class AIPlayer:
     """
@@ -46,10 +48,8 @@ class AIPlayer:
     - Generates and stylizes context-aware responses
     - Maintains internal memory of human-like messages to improve style consistency
     """
-    def __init__(
-            self,
-            player_to_steal: PlayerState, 
-            debug_bool: bool = False):
+
+    def __init__(self, player_to_steal: PlayerState, debug_bool: bool = False):
         """
         Initializes the AIPlayer by stealing identity and attributes from a given human player.
 
@@ -73,7 +73,7 @@ class AIPlayer:
         self.game_state = None
         self.logger = MasterLogger.get_instance()
         self.logger.info(f"AIPlayer initialized with player: {self.stolen_player_code_name}")
-        
+
         # Prompter Dictionary
         self.prompter_dict = {
             "decide_to_respond": OpenAIPrompter(
@@ -82,7 +82,7 @@ class AIPlayer:
                     "persona": "HERE IS YOUR PERSONA",
                     "minutes": "HERE IS THE CONVERSATION SO FAR",
                 },
-                show_prompts = debug_bool,
+                show_prompts=debug_bool,
                 temperature=0.5,
                 llm_model="gpt-4.1-mini",
             ),
@@ -92,22 +92,22 @@ class AIPlayer:
                     "feedback": "HERE IS FEEDBACK FROM PREVIOUS GAMES",
                     "persona": "HERE IS YOUR PERSONA",
                     "minutes": "HERE IS THE CONVERSATION SO FAR",
-                    "reasoning": "YOU HAVE DECIDED TO ANSWER FOR THE FOLLOWING REASONIG"
-                    },
-                show_prompts = debug_bool,
+                    "reasoning": "YOU HAVE DECIDED TO ANSWER FOR THE FOLLOWING REASONIG",
+                },
+                show_prompts=debug_bool,
                 temperature=0.9,
                 llm_model="gpt-4.1-mini",
             ),
-              "stylizer": OpenAIPrompter(
+            "stylizer": OpenAIPrompter(
                 prompt_path="./resources/prompts/v0/stylizer.yaml",
                 prompt_headers={
                     "player_minutes": "HERE ARE MESSAGES THAT YOU WILL COPY THE STYLE FROM",
                     "message": "HERE IS THE MESSAGE YOU WILL STYLIZE",
                 },
-                show_prompts = debug_bool,
+                show_prompts=debug_bool,
                 temperature=0.5,
                 llm_model="gpt-4.1-mini",
-            )
+            ),
         }
 
     async def decide_to_respond(self, minutes: List[str]) -> Dict[str, str]:
@@ -126,7 +126,7 @@ class AIPlayer:
 
         # Define input for the prompt
         input_texts = {
-            "persona": self.persona,  
+            "persona": self.persona,
             "minutes": "\n".join(minutes),
         }
 
@@ -150,8 +150,8 @@ class AIPlayer:
             dtr_resp["reasoning"] = f"Error during decision making. {e}"
             return dtr_resp
 
-        decision = extract_between_delimiters(resp, '```')
-        reasoning = extract_between_delimiters(resp, '***')
+        decision = extract_between_delimiters(resp, "```")
+        reasoning = extract_between_delimiters(resp, "***")
 
         # Handle result dictionary
         if "ERROR NO MATCH FOUND" not in decision and "ERROR NO MATCH FOUND" not in reasoning:
@@ -183,9 +183,9 @@ class AIPlayer:
         prompter = self.prompter_dict["respond"]
         input_texts = {
             "feedback": FEEDBACK,
-            "persona": self.persona, 
+            "persona": self.persona,
             "minutes": "\n".join(minutes),
-            "reasoning": dtr_resp["reasoning"]
+            "reasoning": dtr_resp["reasoning"],
         }
 
         error_response = "ERROR"
@@ -199,7 +199,7 @@ class AIPlayer:
             return error_response
 
         # Use helper function to extract response between triple backticks
-        response = extract_between_delimiters(resp, '```')
+        response = extract_between_delimiters(resp, "```")
 
         if "ERROR NO MATCH FOUND" in response:
             self.logger.warning(f"Invalid format in response: {resp}")
@@ -220,10 +220,7 @@ class AIPlayer:
         """
         prompter = self.prompter_dict["stylizer"]
 
-        input_texts = {
-            "player_minutes": "\n".join(self.humans_messages),
-            "response": response
-        }
+        input_texts = {"player_minutes": "\n".join(self.humans_messages), "response": response}
         error_response = "ERROR"
 
         try:
@@ -236,7 +233,7 @@ class AIPlayer:
         except Exception as e:
             # raise e
             self.logger.error(f"Error during stylizing response: {e}")
-            return error_response # Fallback response
+            return error_response  # Fallback response
 
     def handle_dialogue(self, minutes: List[str]) -> str:
         """
@@ -250,30 +247,24 @@ class AIPlayer:
         """
         # print("inside handle_dialogue")
         # Step 1: Decide whether to respond
-        dtr_resp = asyncio.run(
-            self.decide_to_respond(minutes)
-            )
+        dtr_resp = asyncio.run(self.decide_to_respond(minutes))
         # print(dtr_resp)
 
         # If we decide to stay silent, log the decision and return STAY SILENT
         if dtr_resp["decision"] == "STAY SILENT":
             self.logger.info(f"AI {self.player_state.code_name} decided to stay silent.")
             return "STAY SILENT"
-        
+
         # If we decide to respond, log the decision and procee
         if dtr_resp["decision"] == "RESPOND":
             self.logger.info(f"AI {self.player_state.code_name} decided to respond.")
-            
-        # Step 2: Generate the response
-            response = asyncio.run(
-                self.respond(minutes, dtr_resp)
-                )
+
+            # Step 2: Generate the response
+            response = asyncio.run(self.respond(minutes, dtr_resp))
             if response != "ERROR":
                 # Step 3: Stylize the response
-                styled_response = asyncio.run(
-                    self.stylize_response(response)
-                    )
-                
+                styled_response = asyncio.run(self.stylize_response(response))
+
                 # wait for a random amount of time
 
                 return styled_response
@@ -281,7 +272,7 @@ class AIPlayer:
                 return "ERROR"
         else:
             return "No response needed."
-    
+
     def _steal_player_state(self, player_state_to_steal: PlayerState) -> PlayerState:
         """
         Clones the provided PlayerState but assigns new code name and color for the AI.
@@ -292,7 +283,9 @@ class AIPlayer:
         Returns:
             PlayerState: A new state object for the AI player.
         """
-        self.humans_messages.append(player_state_to_steal.extra_info) # use the extra info as a message to mimic style
+        self.humans_messages.append(
+            player_state_to_steal.extra_info
+        )  # use the extra info as a message to mimic style
         return PlayerState(
             first_name=player_state_to_steal.first_name,
             last_initial=player_state_to_steal.last_initial,
@@ -307,14 +300,14 @@ class AIPlayer:
             lobby_id=player_state_to_steal.lobby_id,
             is_human=False,  # This player is not human
         )
-    
+
     def _build_persona(self) -> str:
         """
         Builds a natural language persona string for the AI based on its assigned attributes.
 
         Returns:
             str: A descriptive persona string for use in prompting.
-        """        
+        """
         player_state = self.player_state
         # Create a persona string based on the player's attributes
         return (
@@ -325,11 +318,10 @@ class AIPlayer:
             f"Of course, there is so much more to you than just these things. "
             f"Your code name is {player_state.code_name} and your color is {player_state.color_name}. "
             f"You are an Human player in a social deduction game, "
-            f"and you are trying to win the game by convincing others of your innocence, " 
+            f"and you are trying to win the game by convincing others of your innocence, "
             f"while also trying to deduce who the AI players are. "
-            
         )
-   
+
     def initialize_game_state(self, game_state: GameState):
         """
         Stores and logs the shared GameState so that the AI can access shared context.

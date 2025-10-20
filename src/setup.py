@@ -1,18 +1,29 @@
 import os
-from typing import Tuple
 from time import sleep
+from typing import Tuple
+
 from colorama import Fore, Style
 
 # from utils.chatbot.ai_v3 import AIPlayer
 from utils.chatbot.ai_v5 import AIPlayer
-from utils.logging_utils import MasterLogger
-from utils.states import GameState, ScreenEnum, PlayerState
-from utils.file_io import SequentialAssigner, load_players_from_lobby, save_player_to_lobby_file, synchronize_start_time
 from utils.constants import (
-    COLORS_INDEX_PATH, COLORS_PATH, NAMES_PATH, NAMES_INDEX_PATH, 
+    COLORS_INDEX_PATH,
+    COLORS_PATH,
+    NAMES_INDEX_PATH,
     # COLORS_PATH, COLORS_INDEX_PATH, COLOR_DICT
+    NAMES_PATH,
 )
+from utils.file_io import (
+    SequentialAssigner,
+    load_players_from_lobby,
+    save_player_to_lobby_file,
+    synchronize_start_time,
+)
+from utils.logging_utils import MasterLogger
+from utils.states import GameState, PlayerState, ScreenEnum
+
 # from utils.asthetics import clear_screen # ,print_color
+
 
 class PlayerSetup:
     """
@@ -25,7 +36,7 @@ class PlayerSetup:
         names_path=NAMES_PATH,
         names_index_path=NAMES_INDEX_PATH,
         colors_path=COLORS_PATH,
-        colors_index_path=COLORS_INDEX_PATH
+        colors_index_path=COLORS_INDEX_PATH,
     ):
         """
         Initializes the PlayerSetup object with necessary paths for name and color assignment.
@@ -51,7 +62,7 @@ class PlayerSetup:
             print(Fore.RED + f"{field_name} cannot be empty." + Style.RESET_ALL)
 
     def prompt_number(self, lower: int, upper: int, prompt: str, field_name: str) -> None:
-        '''
+        """
         Prompt for a number within a specified range and ensure it is valid.
         We use this to collect lobby number, number of players, and grade.
         Args:
@@ -59,29 +70,37 @@ class PlayerSetup:
             upper (int): The upper bound of the valid range.
             prompt (str): The prompt message to display to the user.
             field_name (str): The name of the field to store the value in self.data.
-        '''
+        """
         while True:
             try:
                 value = int(input(Fore.CYAN + f"{prompt} ({lower} - {upper}): " + Style.RESET_ALL))
                 if lower <= value <= upper:
                     self.data[field_name] = value
                     return
-                print(Fore.RED + f"Please enter a number between {lower} and {upper}." + Style.RESET_ALL)
+                print(
+                    Fore.RED
+                    + f"Please enter a number between {lower} and {upper}."
+                    + Style.RESET_ALL
+                )
             except ValueError:
                 print(Fore.RED + "Invalid input. Please enter a valid number." + Style.RESET_ALL)
 
     def prompt_initial(self) -> None:
-        '''
+        """
         Prompt for the player's last initial and ensure it is a single letter (A–Z).
-        '''
+        """
         while True:
-            value = input(Fore.CYAN + "Enter your last initial (A–Z): " + Style.RESET_ALL).strip().upper()
+            value = (
+                input(Fore.CYAN + "Enter your last initial (A–Z): " + Style.RESET_ALL)
+                .strip()
+                .upper()
+            )
             if len(value) == 1 and value.isalpha():
                 self.data["last_initial"] = value
                 return
             print(Fore.RED + "Invalid input. Please enter a single letter (A–Z)." + Style.RESET_ALL)
 
-    def run(self, gs:GameState) -> Tuple[ScreenEnum, GameState, PlayerState]:
+    def run(self, gs: GameState) -> Tuple[ScreenEnum, GameState, PlayerState]:
         """
         Executes the interactive player setup process and initializes player state for the game.
 
@@ -94,7 +113,7 @@ class PlayerSetup:
             gs (GameState): The current game state object that holds shared state across players.
 
         Returns:
-            Tuple[ScreenEnum, GameState, PlayerState]: 
+            Tuple[ScreenEnum, GameState, PlayerState]:
                 screen enum that directs us to the CHAT phase,
                 The updated GameState with player-specific file paths and player count,
                 PlayerState for the current human player.
@@ -102,7 +121,9 @@ class PlayerSetup:
 
         # prompt the player for their information
         self.prompt_number(1, 10000, "Enter your lobby number", "lobby")
-        self.prompt_number(1, 5, "How many people are you playing with?", "number_of_human_players") # TODO change back to 3,5
+        self.prompt_number(
+            1, 5, "How many people are you playing with?", "number_of_human_players"
+        )  # TODO change back to 3,5
         self.prompt_number(6, 8, "What grade are you in?", "grade")
         self.prompt_input("first_name", "Enter your first name: ")
         self.prompt_initial()
@@ -114,10 +135,7 @@ class PlayerSetup:
         # clear_screen()
         print(Fore.GREEN + "✅ Player setup complete." + Style.RESET_ALL)
 
-        lobby_path = os.path.join(
-            "data", "runtime", "lobbies",
-            f"lobby_{self.data['lobby']}"
-        )
+        lobby_path = os.path.join("data", "runtime", "lobbies", f"lobby_{self.data['lobby']}")
         gs.chat_log_path = os.path.join(lobby_path, "chat_log.txt")
         gs.start_time_path = os.path.join(lobby_path, "starttime.txt")
         gs.voting_path = os.path.join(lobby_path, "voting.json")
@@ -128,7 +146,7 @@ class PlayerSetup:
         code_name = self.code_name_assigner.assign()
         color_name = self.color_assigner.assign()
         # for k, v in self.data.items():
-            # print(k, v)
+        # print(k, v)
         ps = PlayerState(
             lobby_id=self.data["lobby"],
             first_name=self.data["first_name"],
@@ -144,16 +162,19 @@ class PlayerSetup:
         )
         save_player_to_lobby_file(ps)
         ps.logger = MasterLogger.get_instance()
-        ps.logger.info(f"Player {ps.first_name} {ps.last_initial}. initialized with code_name: {code_name}")
+        ps.logger.info(
+            f"Player {ps.first_name} {ps.last_initial}. initialized with code_name: {code_name}"
+        )
         # ps.logger.info(f"Player {ps.code_name} initialized with color: {picked_color_name}")
 
         # NEEDS TO GO LAST
-        ps.ai_doppleganger = AIPlayer(
-            player_to_steal=ps
-        )
+        ps.ai_doppleganger = AIPlayer(player_to_steal=ps)
         return ps, gs, ps
 
-def collect_player_data(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> Tuple[ScreenEnum, GameState, PlayerState]:
+
+def collect_player_data(
+    ss: ScreenEnum, gs: GameState, ps: PlayerState
+) -> Tuple[ScreenEnum, GameState, PlayerState]:
     """
     Handles the full player setup and synchronization process before transitioning to the chat phase.
 
@@ -193,7 +214,7 @@ def collect_player_data(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> Tuple
         save_player_to_lobby_file(ps.ai_doppleganger.player_state)
 
     # Synchronize the player list once all players are ready
-    print_str = ''
+    print_str = ""
     while len([p for p in gs.players if p.is_human]) < gs.number_of_human_players:
         sleep(1)
         # Load the players from the lobby once all players are set up
@@ -203,7 +224,7 @@ def collect_player_data(ss: ScreenEnum, gs: GameState, ps: PlayerState) -> Tuple
         if print_str != new_str:
             print(new_str)
             print_str = new_str
-            
+
     # Ensure consistent player list before continuing
     print(Fore.GREEN + "All players are ready!" + Style.RESET_ALL)
     input(Fore.MAGENTA + "Press Enter to continue to the chat phase..." + Style.RESET_ALL)
