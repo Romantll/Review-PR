@@ -7,9 +7,8 @@ How to run:
 
 import json
 import os
-from time import sleep
-
 from collections import Counter
+from time import sleep
 
 from colorama import Fore, Style
 

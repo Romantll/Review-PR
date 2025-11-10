@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DoppelBot Chat</title>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#121a2b; --panel-2:#0e1626; --text:#e6ecff; --text2:#0b1220; --muted:#9db0d6; --accent:#5bb5ff; --accent-2:#8f9cff; --danger:#ff6b6b; --ok:#41862c;
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{ margin:0; font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";
+      color:var(--text); background:linear-gradient(180deg, #A7C7E7 0%, #FA5F55 100%); display:grid; place-items:center; }
+    .app{width:min(1100px, 100%); padding:24px}
+    header{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px}
+    .brand{display:flex; align-items:center; gap:12px}
+    .logo{width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); box-shadow:0 8px 30px rgba(91,181,255,.35)}
+    h1{font-size:20px; margin:0}
+    .pill{font-size:12px; color:var(--muted); padding:6px 10px; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08)}
+
+    .grid{display:grid; grid-template-columns: 300px 1fr; gap:16px}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+
+    .card{background:linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%); border:1px solid rgba(255,255,255,.06); border-radius:var(--radius); box-shadow:0 10px 25px rgba(0,0,0,.35)}
+    .card .head{padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.06); display:flex; align-items:center; justify-content:space-between}
+    .card .body{padding:16px}
+
+    .row{display:flex; gap:10px}
+    .col{display:flex; flex-direction:column; gap:8px}
+    label{font-size:12px; color:var(--muted)}
+    input,select,button,textarea{font:inherit}
+    input,select,textarea{ background:#0a1222; border:1px solid rgba(255,255,255,.08); color:var(--text); padding:10px 12px; border-radius:12px; outline:none; }
+    input:focus, select:focus, textarea:focus{border-color:var(--accent)}
+    .actions{display:flex; gap:8px; flex-wrap:wrap}
+    .btn{padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.08); background:#0c1527; color:var(--text); cursor:pointer}
+    .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2)); border:none; color:#0a0f1c; font-weight:700}
+    .btn.ghost{background:transparent}
+
+    .chat-wrap{display:grid; grid-template-rows: auto 1fr auto; height:70vh;}
+    .chat-log{padding:16px; overflow:auto; display:flex; flex-direction:column; gap:10px}
+    .msg{display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:start}
+    .avatar{width:36px; height:36px; border-radius:10px; background:#0a1222; display:grid; place-items:center; color:var(--muted); border:1px solid rgba(255,255,255,.08)}
+    .bubble{background:#0a1222; border:1px solid rgba(255,255,255,.08); padding:12px 14px; border-radius:12px}
+    .meta{font-size:12px; color:var(--muted); margin-bottom:4px}
+    .ai .bubble{background:rgba(91,181,255,.1); border-color:rgba(91,181,255,.3)}
+    .you .bubble{background:rgba(255,255,255,.04)}
+
+    .composer{display:flex; gap:10px; padding:12px; border-top:1px solid rgba(255,255,255,.06)}
+    .composer input{flex:1}
+
+    .status{font-size:12px; color:var(--text2)}
+    .dot{width:8px; height:8px; border-radius:999px; background:var(--ok); display:inline-block; margin-right:6px}
+    .dot.red{background:var(--danger)}
+    .monospace{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+
+    .overlay{ position:fixed; inset:0; display:grid; place-items:center; background:rgba(7,10,18,.7); backdrop-filter: blur(6px);}
+    .modal{ width:min(720px, 96vw); border-radius:20px; overflow:hidden }
+    .modal .body{ display:grid; grid-template-columns: 1fr 260px; gap:16px }
+    @media (max-width:800px){ .modal .body{ grid-template-columns:1fr } }
+    .list{ max-height:50vh; overflow:auto; display:flex; flex-direction:column }
+    .room-item{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.06) }
+    .room-id{ font-weight:700; letter-spacing:.5px }
+    .room-meta{ color:var(--muted); font-size:12px }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <h1>DoppelBot Chat</h1>
+        <span class="pill">frontend prototype</span>
+      </div>
+      <div class="status" id="status"><span class="dot red"></span> disconnected</div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <div class="head"><strong>Session</strong></div>
+        <div class="body col">
+          <div class="col"
+          <div class="col">
+            <label for="mode">Mode</label>
+            <select id="mode">
+              <option value="mock" selected>Mock (no backend yet)</option>
+              <option value="ws">WebSocket (plug in later)</option>
+            </select>
+          </div>
+          <div class="actions">
+            <button class="btn" id="disconnect">Disconnect</button>
+            <button class="btn" id="clear">Clear Chat</button>
+          </div>
+          <div class="col">
+            <label>Notes</label>
+            <ul style="margin:0 0 0 18px; padding:0; color:var(--muted)">
+              <li>Use the <b>Room Select</b> overlay to pick or create a room.</li>
+              <li>Start in <em>Mock</em> mode; switch to <em>WebSocket</em> after backend.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card chat-wrap">
+        <div class="head"><strong>Room <span id="roomLabel" class="monospace">—</span></strong>
+          <div class="actions"><button class="btn" id="openRoomSelect">Change Room</button></div>
+        </div>
+        <div id="log" class="chat-log" aria-live="polite"></div>
+        <div class="composer">
+          const name = 'You';//temp fixed name
+          <input id="input" placeholder="Type a message… (Enter to send)" />
+          <button class="btn primary" id="send">Send</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <section class="card modal">
+      <div class="head">
+        <strong>Select a room</strong>
+        <div class="actions">
+          <button class="btn" id="refreshRooms">Refresh</button>
+          <button class="btn ghost" id="closeOverlay">Close</button>
+        </div>
+      </div>
+      <div class="body">
+        <div>
+          <div id="roomList" class="list" role="list"></div>
+        </div>
+        <div class="col" style="padding-right:16px">
+          <label>Create new room</label>
+          <input id="newRoomId" class="monospace" placeholder="e.g., ABC123" />
+          <button class="btn primary" id="createRoom">Create & Join</button>
+          <hr style="border-color:rgba(255,255,255,.08)"/>
+          <label>Tips</label>
+          <ul style="margin:0 0 0 18px; padding:0; color:var(--muted)">
+            <li>This list is <b>mocked</b> until the backend is ready.</li>
+            <li>Later, replace with <code>fetch('/api/rooms')</code> and <code>POST /api/rooms</code>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const $ = (s)=>document.querySelector(s);
+    const logEl = $('#log');
+    const statusEl = $('#status');
+    const roomLabel = $('#roomLabel');
+    const overlay = $('#overlay');
+    let ws = null; let connected=false; let currentRoom = '';
+
+    function setStatus(ok){ connected=ok; statusEl.innerHTML = ok ? '<span class="dot"></span> connected' : '<span class="dot red"></span> disconnected'; }
+    function appendMsg(kind, name, text){
+      const wrap=document.createElement('div'); wrap.className=`msg ${kind}`;
+      wrap.innerHTML=`<div class="avatar">${kind==='ai'?'AI':'You'}</div><div class="bubble"><div class="meta">${name}</div><div>${escapeHtml(text)}</div></div>`;
+      logEl.appendChild(wrap); logEl.scrollTop=logEl.scrollHeight;
+    }
+    function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));}
+
+    const mockRooms = ()=>[
+      {id:'LOBBY',users:3,updated:'just now'},
+      {id:'ALPHA1',users:1,updated:'2m ago'},
+      {id:'BETA42',users:5,updated:'8m ago'}];
+
+    async function loadRooms(){
+      const data=mockRooms(); const list=$('#roomList'); list.innerHTML='';
+      data.forEach(r=>{
+        const row=document.createElement('div'); row.className='room-item';
+        row.innerHTML=`<div><div class="room-id monospace">${r.id}</div><div class="room-meta">${r.users} online • ${r.updated}</div></div><button class="btn primary" data-join="${r.id}">Join</button>`;
+        list.appendChild(row);
+      });
+    }
+
+    function joinRoom(id){ currentRoom=id; roomLabel.textContent=id; overlay.style.display='none'; setStatus(true); }
+
+    async function mockAiReply(userText){
+      const delay=250+Math.random()*650; await new Promise(r=>setTimeout(r,delay));
+      appendMsg('ai','DoppelBot (mock)',`You said: ${userText}`);
+    }
+
+    $('#send').addEventListener('click',send);
+    $('#input').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();send();}});
+    $('#clear').addEventListener('click',()=>{logEl.innerHTML='';});
+    $('#disconnect').addEventListener('click',()=>{
+      if(ws){try{ws.close();}catch(_){}} ws=null; setStatus(false); appendMsg('ai','System','You have disconnected.');
+      currentRoom=''; roomLabel.textContent='—';
+      overlay.style.display='grid'; loadRooms();
+    });
+    $('#openRoomSelect').addEventListener('click',()=>{overlay.style.display='grid';loadRooms();});
+    $('#closeOverlay').addEventListener('click',()=>{overlay.style.display='none';});
+    $('#refreshRooms').addEventListener('click',loadRooms);
+    $('#createRoom').addEventListener('click',()=>{let id=$('#newRoomId').value.trim().toUpperCase(); if(!id){id=Math.random().toString(36).slice(2,8).toUpperCase();} joinRoom(id);});
+    document.addEventListener('click',e=>{const btn=e.target.closest('[data-join]'); if(btn){joinRoom(btn.getAttribute('data-join'));}});
+
+    function send(){
+      const val=$('#input').value.trim(); if(!val) return; $('#input').value='';
+        // generate a temporary name once per browser session
+      const name = localStorage.getItem('tempName') ||
+        (() => {
+          const temp = 'Player-' + Math.floor(Math.random() * 1000);
+          localStorage.setItem('tempName', temp);
+          return temp;
+        })();
+      appendMsg('you',name,val);
+      const mode=$('#mode').value;
+      if(mode==='mock'||!ws){mockAiReply(val);} else if(ws&&ws.readyState===1){ws.send(JSON.stringify({type:'chat',text:val}));}
+    }
+
+    overlay.style.display='grid'; loadRooms(); setStatus(false);
+  </script>
+</body>
+</html>
